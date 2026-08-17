@@ -96,6 +96,85 @@
     text-shadow:0 0 10px rgba(140,170,255,0.55); opacity:0; transition:opacity 0.25s;
   }
 
+  /* ---- surface landing screens: a monitor-style panel that appears once the
+     camera has descended to a moon's surface, holding that category's content ---- */
+  .surfaceScreen{
+    position:fixed; z-index:13; pointer-events:none; transform:translate(-50%,-50%);
+    width:360px; max-width:78vw; box-sizing:border-box;
+    background:linear-gradient(180deg, rgba(12,18,36,0.86), rgba(6,9,20,0.92));
+    border:1px solid rgba(170,205,255,0.9); border-radius:6px;
+    box-shadow:
+      0 0 3px rgba(190,220,255,0.95),
+      0 0 20px rgba(120,165,255,0.6),
+      0 0 68px rgba(70,120,230,0.45),
+      inset 0 0 1px rgba(210,230,255,0.6),
+      inset 0 0 36px rgba(40,70,160,0.2);
+    padding:20px 24px 24px; text-align:left;
+    font-family:'Consolas','SFMono-Regular',monospace; color:#cfe0ff;
+    opacity:0; transition:opacity 0.6s;
+    animation:screenHum 3.4s ease-in-out infinite;
+  }
+  .surfaceScreen.show{ opacity:1; pointer-events:auto; }
+  .surfaceScreen::before{
+    content:''; position:absolute; inset:0; border-radius:6px; pointer-events:none;
+    background:repeating-linear-gradient(180deg, rgba(140,170,255,0.05) 0px, rgba(140,170,255,0.05) 1px, transparent 1px, transparent 3px);
+  }
+  @keyframes screenHum{
+    0%, 100% {
+      box-shadow:
+        0 0 3px rgba(190,220,255,0.95), 0 0 20px rgba(120,165,255,0.6),
+        0 0 68px rgba(70,120,230,0.45), inset 0 0 1px rgba(210,230,255,0.6),
+        inset 0 0 36px rgba(40,70,160,0.2);
+    }
+    50% {
+      box-shadow:
+        0 0 5px rgba(200,228,255,1), 0 0 32px rgba(140,185,255,0.8),
+        0 0 92px rgba(90,140,245,0.6), inset 0 0 2px rgba(220,238,255,0.75),
+        inset 0 0 44px rgba(55,90,190,0.28);
+    }
+  }
+  .screenHeader{
+    font-size:0.72rem; letter-spacing:0.14em; text-transform:uppercase; font-weight:700;
+    color:#b7cbff; margin-bottom:14px; padding-bottom:9px;
+    border-bottom:1px solid rgba(160,195,255,0.45);
+    text-shadow:0 0 8px rgba(140,180,255,0.6);
+  }
+  .screenBody{
+    font-size:0.8rem; line-height:1.7; color:rgba(212,224,255,0.92);
+    min-height:5.4em; white-space:pre-wrap;
+  }
+  .typeCursor{ display:inline-block; width:0.5em; margin-left:1px; background:#9fb6ff; animation:screenBlink 0.9s steps(1) infinite; }
+  @keyframes screenBlink{ 50%{ opacity:0; } }
+
+  .screenPlayBtn{
+    margin-top:16px; cursor:pointer; font-family:inherit; font-size:0.8rem; letter-spacing:0.06em;
+    color:#e2ebff; background:rgba(140,170,255,0.14); border:1px solid rgba(180,210,255,0.85);
+    border-radius:20px; padding:9px 18px; box-shadow:0 0 14px rgba(120,165,255,0.4);
+  }
+  .screenPlayBtn:hover{ background:rgba(140,170,255,0.26); box-shadow:0 0 20px rgba(140,180,255,0.6); }
+
+  .slideshowFrame{
+    position:relative; width:100%; height:150px; overflow:hidden; border-radius:4px;
+    border:1px solid rgba(160,195,255,0.5); background:rgba(5,8,18,0.65);
+    box-shadow:inset 0 0 20px rgba(50,85,180,0.2);
+  }
+  .slide{
+    position:absolute; inset:0; display:flex; flex-direction:column; align-items:center;
+    justify-content:center; opacity:0; transition:opacity 0.7s; text-align:center; padding:14px; box-sizing:border-box;
+  }
+  .slide.show{ opacity:1; }
+  .slideTag{ font-size:0.6rem; letter-spacing:0.12em; color:rgba(150,180,255,0.75); text-transform:uppercase; margin-bottom:7px; }
+  .slideTitle{ font-size:0.98rem; font-weight:700; color:#e6edff; }
+  .slideSub{ font-size:0.68rem; color:rgba(195,210,255,0.65); margin-top:5px; }
+
+  .socialRow{ display:flex; gap:12px; margin-top:16px; opacity:0; transition:opacity 0.6s; }
+  .socialRow.show{ opacity:1; }
+  .socialIcon{
+    width:30px; height:30px; border:1px solid rgba(150,180,255,0.5); border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-size:0.62rem; letter-spacing:0.02em; color:#9fb6ff;
+  }
+
   #lightbox{
     position:fixed; inset:0; z-index:50; background:rgba(2,4,10,0.92);
     display:flex; align-items:center; justify-content:center;
@@ -297,12 +376,25 @@ scene.add(new THREE.Points(starGeo, new THREE.PointsMaterial({ color:0xffffff, s
 // to exist — so they're rendered with their real measured color and real elongated
 // proportions instead of a fabricated texture.
 const CATEGORIES = [
-  { title: 'GALLERY', sub: 'Recent builds, in motion', pos: new THREE.Vector3(-2.54, 8.08, 5.20), type: 'io', moon: 'Io', video: true, videoLabel: 'REEL' },
-  { title: 'NEW BUILDS', sub: 'Custom sites, from scratch', pos: new THREE.Vector3(3.50, 5.57, 5.33), type: 'europa', moon: 'Europa' },
-  { title: 'REDESIGNS & REBUILDS', sub: 'New life for an existing site', pos: new THREE.Vector3(-2.42, 3.06, 6.56), type: 'textured', moon: 'Ganymede', tex: './textures/ganymede_map.jpg' },
-  { title: 'SUPPORT & HOSTING', sub: 'Ongoing care after launch', pos: new THREE.Vector3(3.62, 0.55, 6.69), type: 'textured', moon: 'Callisto', tex: './textures/callisto_map.jpg' },
-  { title: 'ABOUT', sub: 'Who’s behind this', pos: new THREE.Vector3(-2.29, -1.96, 7.91), type: 'synthetic', moon: 'Amalthea', color: 0xa8503c, scale: [1.35, 0.92, 0.78] },
-  { title: 'CONTACT', sub: 'Start a project', pos: new THREE.Vector3(3.74, -4.47, 8.05), type: 'synthetic', moon: 'Himalia', color: 0x4a4642, scale: [1.15, 1.08, 0.9] },
+  { title: 'GALLERY', sub: 'Recent builds, in motion', pos: new THREE.Vector3(-2.54, 8.08, 5.20), type: 'io', moon: 'Io', video: true, videoLabel: 'REEL',
+    screen: { kind: 'video' } },
+  { title: 'NEW BUILDS', sub: 'Custom sites, from scratch', pos: new THREE.Vector3(3.50, 5.57, 5.33), type: 'europa', moon: 'Europa',
+    screen: { kind: 'slideshow', slides: [
+      { tag: 'Restaurant', title: 'Coastal Table', sub: 'Reservations + full menu, built from scratch' },
+      { tag: 'Nonprofit', title: 'Riverbend Trust', sub: 'Donor portal, volunteer signups' },
+      { tag: 'Studio', title: 'Hearth & Line', sub: 'E-commerce for a small furniture maker' },
+    ] } },
+  { title: 'REDESIGNS & REBUILDS', sub: 'New life for an existing site', pos: new THREE.Vector3(-2.42, 3.06, 6.56), type: 'textured', moon: 'Ganymede', tex: './textures/ganymede_map.jpg',
+    screen: { kind: 'slideshow', slides: [
+      { tag: 'Before → After', title: 'Meridian Law', sub: 'Decade-old site, rebuilt on modern stack' },
+      { tag: 'Before → After', title: 'Fern & Fox Cafe', sub: 'Slow, unreadable on mobile — now fast' },
+    ] } },
+  { title: 'SUPPORT & HOSTING', sub: 'Ongoing care after launch', pos: new THREE.Vector3(3.62, 0.55, 6.69), type: 'textured', moon: 'Callisto', tex: './textures/callisto_map.jpg',
+    screen: { kind: 'type', text: 'Uptime monitoring, 24/7\nSecurity patches + backups\nContent updates, same-week turnaround\nOne flat monthly rate — no surprise invoices' } },
+  { title: 'ABOUT', sub: 'Who’s behind this', pos: new THREE.Vector3(-2.29, -1.96, 7.91), type: 'synthetic', moon: 'Amalthea', color: 0xa8503c, scale: [1.35, 0.92, 0.78], landingHeight: 0.4,
+    screen: { kind: 'type', text: 'A small studio that builds real sites for real\nbusinesses — no templates pretending to be\ncustom work. Design, build, and the boring\nstuff (hosting, upkeep) all handled in one place.' } },
+  { title: 'CONTACT', sub: 'Start a project', pos: new THREE.Vector3(3.74, -4.47, 8.05), type: 'synthetic', moon: 'Himalia', color: 0x4a4642, scale: [1.15, 1.08, 0.9], landingHeight: 0.4,
+    screen: { kind: 'type', text: 'Tell me what you\'re building and I\'ll get\nback to you within a day.\n\nhello@studio.example', social: true } },
 ];
 const MOON_RADIUS = 1.15;
 
@@ -665,6 +757,29 @@ CATEGORIES.forEach((cat, i) => {
     document.body.appendChild(panelEl);
     screenObjs[screenObjs.length - 1].panelEl = panelEl;
   }
+
+  // the "landed on the surface" monitor screen — built once per moon, revealed by
+  // showSurfaceScreen() after the camera finishes its descent
+  const sc = cat.screen;
+  const screenEl = document.createElement('div');
+  screenEl.className = 'surfaceScreen';
+  if (sc.kind === 'video') {
+    screenEl.innerHTML = `<div class="screenHeader">${cat.title} — live feed</div>
+      <div class="screenBody">Recent work, captured in motion.</div>
+      <button type="button" class="screenPlayBtn">▶ play reel</button>`;
+  } else if (sc.kind === 'slideshow') {
+    screenEl.innerHTML = `<div class="screenHeader">${cat.title}</div>
+      <div class="slideshowFrame">${sc.slides.map((s, si) => `<div class="slide${si === 0 ? ' show' : ''}"><div class="slideTag">${s.tag}</div><div class="slideTitle">${s.title}</div><div class="slideSub">${s.sub}</div></div>`).join('')}</div>`;
+  } else if (sc.kind === 'type') {
+    screenEl.innerHTML = `<div class="screenHeader">${cat.title}</div>
+      <div class="screenBody"></div>
+      ${sc.social ? '<div class="socialRow"></div>' : ''}`;
+  }
+  document.body.appendChild(screenEl);
+  screenObjs[screenObjs.length - 1].screenEl = screenEl;
+  if (sc.kind === 'video') {
+    screenEl.querySelector('.screenPlayBtn').addEventListener('click', (e) => { e.stopPropagation(); openLightbox(); });
+  }
 });
 
 // ---------- camera waypoints & docking ----------
@@ -675,21 +790,42 @@ function dockWaypointFor(cat){
   return { pos, look: cat.pos.clone() };
 }
 
+// the second, closer push-in used once a moon is picked — close and tilted enough
+// that the sphere's curvature stops being obvious and it reads as ground level,
+// looking out toward "the horizon" along the surface rather than at the moon's
+// center. There's no real close-up ground photography for any of these bodies to
+// texture the ground with, so this leans on tilt/proximity rather than pretending
+// to have surface detail we don't have.
+function landingWaypointFor(cat){
+  const dir = cat.pos.clone().normalize();
+  const height = cat.landingHeight || 0.24;
+  const surfacePoint = cat.pos.clone().add(dir.clone().multiplyScalar(MOON_RADIUS));
+  let tangent = new THREE.Vector3(0, 1, 0).cross(dir);
+  if (tangent.lengthSq() < 0.001) tangent = new THREE.Vector3(1, 0, 0).cross(dir);
+  tangent.normalize();
+  const pos = surfacePoint.clone().add(dir.clone().multiplyScalar(height)).add(tangent.clone().multiplyScalar(-0.15));
+  const look = surfacePoint.clone().add(tangent.clone().multiplyScalar(1.4)).add(dir.clone().multiplyScalar(-0.02));
+  const anchor = surfacePoint.clone().add(tangent.clone().multiplyScalar(0.55)).add(dir.clone().multiplyScalar(0.14));
+  return { pos, look, anchor };
+}
+
 let camFrom = { pos: camera.position.clone(), look: EARTH_CLOSE.look.clone() };
 let camTo = { pos: camera.position.clone(), look: EARTH_CLOSE.look.clone() };
-let tweenStart = 0, tweenDuration = 1600, tweening = false;
+let tweenStart = 0, tweenDuration = 1600, tweening = false, onTweenComplete = null;
 let currentLook = EARTH_CLOSE.look.clone();
 let currentIndex = -1;
 let introDone = false;
+let landed = false; // true once the camera has finished descending onto the current moon
 
 function easeInOutCubic(x){ return x < 0.5 ? 4*x*x*x : 1 - Math.pow(-2*x+2,3)/2; }
 
-function startTween(toPos, toLook, duration){
+function startTween(toPos, toLook, duration, onComplete){
   camFrom = { pos: camera.position.clone(), look: currentLook.clone() };
   camTo = { pos: toPos.clone(), look: toLook.clone() };
   tweenStart = performance.now();
   tweenDuration = duration;
   tweening = true;
+  onTweenComplete = onComplete || null;
 }
 
 function advanceIntro(){
@@ -748,10 +884,90 @@ function updateChrome(){
 }
 
 function goTo(index){
-  currentIndex = Math.max(-1, Math.min(CATEGORIES.length - 1, index));
-  const target = currentIndex < 0 ? OVERVIEW : dockWaypointFor(CATEGORIES[currentIndex]);
-  startTween(target.pos, target.look, 1600);
+  const clamped = Math.max(-1, Math.min(CATEGORIES.length - 1, index));
+  // re-selecting the moon that's already the target (a stray double-click, or
+  // clicking the landed surface itself) would otherwise restart the whole descent
+  // mid-flight — ignore it instead of resetting progress
+  if (clamped === currentIndex && (tweening || landed || clamped < 0)) return;
+  currentIndex = clamped;
+  hideSurfaceScreen();
+  if (currentIndex < 0) {
+    startTween(OVERVIEW.pos, OVERVIEW.look, 1600);
+  } else {
+    const cat = CATEGORIES[currentIndex];
+    const dock = dockWaypointFor(cat);
+    const landing = landingWaypointFor(cat);
+    const landedIndex = currentIndex;
+    startTween(dock.pos, dock.look, 1300, () => {
+      startTween(landing.pos, landing.look, 1500, () => {
+        showSurfaceScreen(landedIndex);
+      });
+    });
+  }
   updateChrome();
+}
+
+function showSurfaceScreen(index){
+  // guard against a stale callback firing after the user has already navigated away
+  if (index !== currentIndex) return;
+  landed = true;
+  const s = screenObjs[index];
+  const sc = s.cat.screen;
+  s.screenEl.classList.add('show');
+  if (sc.kind === 'slideshow' && !sc._started) {
+    sc._started = true;
+    startSlideshow(s.screenEl.querySelector('.slideshowFrame'), sc.slides.length);
+  } else if (sc.kind === 'type') {
+    const bodyEl = s.screenEl.querySelector('.screenBody');
+    if (!sc._typed) {
+      sc._typed = true;
+      startTypewriter(bodyEl, sc.text, () => {
+        if (sc.social) revealSocial(s.screenEl);
+      });
+    } else if (sc.social) {
+      revealSocial(s.screenEl);
+    }
+  }
+}
+function hideSurfaceScreen(){
+  landed = false;
+  screenObjs.forEach(s => s.screenEl && s.screenEl.classList.remove('show'));
+}
+function revealSocial(screenEl){
+  const row = screenEl.querySelector('.socialRow');
+  if (!row || row.dataset.built) return;
+  row.dataset.built = '1';
+  row.innerHTML = ['IG', 'X', 'IN', 'GH'].map(label => `<div class="socialIcon">${label}</div>`).join('');
+  row.classList.add('show');
+}
+function startTypewriter(el, text, onDone){
+  el.textContent = '';
+  const cursor = document.createElement('span');
+  cursor.className = 'typeCursor';
+  cursor.textContent = ' ';
+  let i = 0;
+  const speed = 22;
+  const step = () => {
+    if (i <= text.length) {
+      el.textContent = text.slice(0, i);
+      el.appendChild(cursor);
+      i++;
+      setTimeout(step, speed);
+    } else {
+      cursor.remove();
+      if (onDone) onDone();
+    }
+  };
+  step();
+}
+function startSlideshow(frameEl, count){
+  let idx = 0;
+  const slides = frameEl.querySelectorAll('.slide');
+  setInterval(() => {
+    slides[idx].classList.remove('show');
+    idx = (idx + 1) % count;
+    slides[idx].classList.add('show');
+  }, 3600);
 }
 
 document.getElementById('back').addEventListener('click', (e) => { e.stopPropagation(); goTo(-1); });
@@ -874,6 +1090,7 @@ function animate(now){
     if (raw >= 1) {
       tweening = false;
       if (!introDone) advanceIntro();
+      else if (onTweenComplete) { const cb = onTweenComplete; onTweenComplete = null; cb(); }
     }
   } else if (!introDone && introLegIndex < 0) {
     // still sitting at the Earth close-up before the first leg kicks off
@@ -886,11 +1103,14 @@ function animate(now){
   camera.lookAt(currentLook);
   raycaster.setFromCamera(pointerNDC, camera);
 
-  screenObjs.forEach(s => {
+  screenObjs.forEach((s, i) => {
     const wp = tmpV3.setFromMatrixPosition(s.group.matrixWorld);
     const ndc = wp.clone().project(camera);
     const dist = camera.position.distanceTo(wp);
-    const visible = introDone && ndc.z < 1 && dist < 14;
+    // once the camera has descended onto this specific moon, the orbital title/panel
+    // hand off to the surface screen instead of overlapping it
+    const isLandedHere = landed && i === currentIndex;
+    const visible = introDone && ndc.z < 1 && dist < 14 && !isLandedHere;
     const leftPx = (ndc.x*0.5+0.5) * innerWidth;
     const topPx = (1-(ndc.y*0.5+0.5)) * innerHeight;
     const scaleRem = Math.max(1.4, 5.2 - dist*0.24);
@@ -921,6 +1141,12 @@ function animate(now){
         s.panelEl.style.left = leftPx + 'px'; s.panelEl.style.top = (topPx + 90) + 'px';
         s.panelEl.style.fontSize = Math.min(scaleRem, 2.2) + 'rem'; s.panelEl.style.opacity = 1;
       } else { s.panelEl.style.opacity = 0; }
+    }
+    if (s.screenEl && isLandedHere) {
+      const anchor = landingWaypointFor(s.cat).anchor;
+      const aNdc = anchor.project(camera);
+      s.screenEl.style.left = ((aNdc.x*0.5+0.5) * innerWidth) + 'px';
+      s.screenEl.style.top = ((1-(aNdc.y*0.5+0.5)) * innerHeight) + 'px';
     }
   });
 
