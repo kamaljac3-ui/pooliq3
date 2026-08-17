@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Io // Volcanic Monitor</title>
+<style>
+  html,body{margin:0;padding:0;overflow:hidden;background:#020103;height:100%;}
+  canvas{display:block;}
+  #hud{
+    position:fixed; top:0; left:0; right:0; padding:28px 40px; pointer-events:none;
+    font-family:'Consolas','SFMono-Regular',monospace; color:#ffb37a; z-index:10;
+    display:flex; justify-content:space-between; align-items:flex-start;
+    text-shadow:0 0 12px rgba(255,140,60,0.5);
+  }
+  #hud h1{font-size:1.05rem; letter-spacing:0.12em; margin:0; font-weight:600; text-transform:uppercase;}
+  #hud .tag{font-size:0.68rem; opacity:0.6; margin-top:6px; max-width:320px; line-height:1.5;}
+  #hud .stats{font-size:0.7rem; text-align:right; opacity:0.85; line-height:1.7;}
+  #hud .stats b{color:#ffe0b0;}
+  #vignette{
+    position:fixed; inset:0; pointer-events:none; z-index:9;
+    background:radial-gradient(ellipse at center, rgba(0,0,0,0) 40%, rgba(0,0,0,0.7) 100%);
+  }
+  #scan{
+    position:fixed; inset:0; pointer-events:none; z-index:8; opacity:0.04;
+    background:repeating-linear-gradient(0deg, #000 0px, #000 1px, transparent 1px, transparent 3px);
+  }
+  .label{
+    position:fixed; z-index:11; pointer-events:none; transform:translate(-50%,-100%);
+    font-family:'Consolas','SFMono-Regular',monospace; font-size:0.62rem; color:#ff9a52;
+    text-shadow:0 0 8px rgba(255,110,40,0.8); white-space:nowrap; opacity:0;
+    transition:opacity 0.3s;
+  }
+  .label .dot{
+    width:5px; height:5px; border-radius:50%; background:#ffb37a; margin:0 auto 4px;
+    box-shadow:0 0 8px 2px rgba(255,140,60,0.9);
+  }
+  .label .ring{
+    position:absolute; left:50%; top:2px; width:16px; height:16px; margin-left:-8px;
+    border:1px solid rgba(255,140,60,0.55); border-radius:50%;
+  }
+</style>
+</head>
+<body>
+<div id="hud">
+  <div>
+    <h1>Io // Volcanic Monitor</h1>
+    <div class="tag">Procedural sulfur-surface render — stylized eruption simulation, not survey-accurate positioning.</div>
+  </div>
+  <div class="stats" id="stats">
+    distance from Jupiter: 421,700 km<br>
+    surface temp: <b>-143&deg;C</b> ambient / <b>+1,200&deg;C</b> hotspot<br>
+    active vents: <b id="ventCount">6</b> / 6<br>
+    mission clock: <b id="clock">00:00:00</b>
+  </div>
+</div>
+<div id="scan"></div>
+<div id="vignette"></div>
+<div id="labels"></div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+
+// ---------- setup ----------
+const scene = new THREE.Scene();
+scene.fog = new THREE.FogExp2(0x020103, 0.012);
+
+const camera = new THREE.PerspectiveCamera(50, innerWidth/innerHeight, 0.1, 500);
+camera.position.set(0, 1.6, 9.5);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(innerWidth, innerHeight);
+renderer.setPixelRatio(1); // keep bloom render targets in lockstep with canvas size
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.0;
+document.body.appendChild(renderer.domElement);
+
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.35, 0.25, 0.95);
+composer.addPass(bloom);
+composer.addPass(new OutputPass());
+
+const LIGHT_DIR = new THREE.Vector3(1, 0.35, 0.55).normalize();
+
+// ---------- named eruption sites (approximate, stylized — not survey-accurate) ----------
+const VOLCANOES = [
+  { name: 'Loki Patera',    lat: 13,  lon: 308 },
+  { name: 'Pele',           lat: -19, lon: 255 },
+  { name: 'Pillan Patera',  lat: -12, lon: 244 },
+  { name: 'Prometheus',     lat: -2,  lon: 153 },
+  { name: 'Tvashtar Catena',lat: 63,  lon: 122 },
+  { name: 'Marduk',         lat: -28, lon: 210 },
+];
+function sphDir(latDeg, lonDeg) {
+  const lat = latDeg * Math.PI/180, lon = lonDeg * Math.PI/180;
+  return new THREE.Vector3(Math.cos(lat)*Math.cos(lon), Math.sin(lat), Math.cos(lat)*Math.sin(lon)).normalize();
+}
+const siteDirs = VOLCANOES.map(v => sphDir(v.lat, v.lon));
+
+// ---------- shared GLSL noise ----------
+const NOISE_GLSL = `
+  float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7))) * 43758.5453123); }
+  float vnoise(vec2 p){
+    vec2 i = floor(p), f = fract(p);
+    float a = hash(i), b = hash(i+vec2(1.0,0.0)), c = hash(i+vec2(0.0,1.0)), d = hash(i+vec2(1.0,1.0));
+    vec2 u = f*f*(3.0-2.0*f);
+    return mix(a,b,u.x) + (c-a)*u.y*(1.0-u.x) + (d-b)*u.x*u.y;
+  }
+  float fbm(vec2 p){
+    float v = 0.0, amp = 0.5;
+    for (int i=0;i<7;i++){ v += amp*vnoise(p); p *= 2.08; amp *= 0.52; }
+    return v;
+  }
+`;
+
+// ---------- Io ----------
+const IO_RADIUS = 2.3;
+const texLoader = new THREE.TextureLoader();
+const ioColorMap = texLoader.load('./textures/io_map.jpg');
+ioColorMap.colorSpace = THREE.SRGBColorSpace;
+ioColorMap.wrapS = THREE.RepeatWrapping;
+ioColorMap.anisotropy = 4;
+
+const ioUniforms = {
+  uTime: { value: 0 },
+  uLightDir: { value: LIGHT_DIR },
+  uSites: { value: siteDirs.map(d => d.clone()) },
+  uColorMap: { value: ioColorMap },
+  uLonOffset: { value: 0.5 }, // real mosaic is centered on longitude 180
+};
+const ioMat = new THREE.ShaderMaterial({
+  uniforms: ioUniforms,
+  vertexShader: `
+    varying vec3 vObjNormal;
+    varying vec3 vWorldNormal;
+    varying vec3 vWorldPos;
+    void main(){
+      vObjNormal = normalize(position);
+      vWorldNormal = normalize(normalMatrix * normal);
+      vWorldPos = (modelMatrix * vec4(position,1.0)).xyz;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0);
+    }
+  `,
+  fragmentShader: `
+    ${NOISE_GLSL}
+    uniform float uTime;
+    uniform vec3 uLightDir;
+    uniform vec3 uSites[6];
+    uniform sampler2D uColorMap;
+    uniform float uLonOffset;
+    varying vec3 vObjNormal;
+    varying vec3 vWorldNormal;
+    varying vec3 vWorldPos;
+
+    void main(){
+      vec3 n = normalize(vObjNormal);
+      // this mosaic (Io_from_Galileo_and_Voyager_missions.jpg) is an EQUAL-AREA cylindrical
+      // projection, not plate carree: v is linear in sin(latitude), i.e. just n.y directly
+      vec2 uv = vec2(fract(atan(n.z, n.x)/6.2831853 + uLonOffset), 0.5 + 0.5*n.y);
+
+      vec3 col = texture2D(uColorMap, uv).rgb;
+      float height = dot(col, vec3(0.299,0.587,0.114)); // luminance as a relief proxy
+
+      // screen-space bump mapping — turns the photo's own luminance into relief shading,
+      // without displacing geometry (Mikkelsen's unparametrized-surface technique)
+      vec3 Nn = normalize(vWorldNormal);
+      vec3 dPosX = dFdx(vWorldPos);
+      vec3 dPosY = dFdy(vWorldPos);
+      float dHx = dFdx(height);
+      float dHy = dFdy(height);
+      vec3 R1 = cross(dPosY, Nn);
+      vec3 R2 = cross(Nn, dPosX);
+      float det = dot(dPosX, R1);
+      vec3 surfGrad = sign(det) * (dHx*R1 + dHy*R2);
+      vec3 bumpN = normalize(abs(det) * Nn - 1.1 * surfGrad);
+
+      // lighting: lambert off the bumped normal + soft ambient floor, night side stays visible but dim
+      float diff = max(dot(bumpN, uLightDir), 0.0);
+      float lit = 0.20 + diff * 0.95;
+      vec3 shaded = col * lit;
+
+      // volcanic hotspot glow — visible even on the dark side (real Io does this)
+      vec3 glow = vec3(0.0);
+      for (int i=0;i<6;i++){
+        float d = distance(n, uSites[i]);
+        float pulse = 0.6 + 0.4*sin(uTime*1.6 + float(i)*2.1);
+        float g = smoothstep(0.14, 0.0, d) * pulse;
+        glow += vec3(1.0, 0.55, 0.15) * g * 2.2;
+        float ring = smoothstep(0.20,0.16,d) - smoothstep(0.16,0.12,d);
+        glow += vec3(1.0,0.7,0.3) * ring * 0.6;
+      }
+
+      gl_FragColor = vec4(shaded + glow, 1.0);
+    }
+  `,
+});
+const ioMesh = new THREE.Mesh(new THREE.SphereGeometry(IO_RADIUS, 128, 128), ioMat);
+scene.add(ioMesh);
+
+// ---------- eruption particle fountains ----------
+const PER_SITE = 90;
+const total = PER_SITE * siteDirs.length;
+const pGeo = new THREE.BufferGeometry();
+const aOrigin = new Float32Array(total*3);
+const aVel = new Float32Array(total*3);
+const aGrav = new Float32Array(total*3);
+const aLife = new Float32Array(total);
+const aPhase = new Float32Array(total);
+const aSeed = new Float32Array(total);
+
+let idx = 0;
+for (let s = 0; s < siteDirs.length; s++) {
+  const dir = siteDirs[s];
+  // build a local tangent basis for horizontal spread
+  const up = dir;
+  const tangent = new THREE.Vector3(0,1,0).cross(up).lengthSq() < 0.001
+    ? new THREE.Vector3(1,0,0).cross(up).normalize()
+    : new THREE.Vector3(0,1,0).cross(up).normalize();
+  const bitangent = up.clone().cross(tangent).normalize();
+
+  for (let i = 0; i < PER_SITE; i++) {
+    const origin = up.clone().multiplyScalar(IO_RADIUS * 1.01);
+    const g = 3.0;
+    const targetHeight = 0.35 + Math.random() * 0.65; // plume apex, in radii above surface — keeps arcs close to Io
+    const v0 = Math.sqrt(2 * g * targetHeight);
+    const life = (2 * v0) / g; // time to fall back to the surface
+    const spreadAngle = Math.random() * Math.PI * 2;
+    const spreadAmt = (0.15 + Math.random()*0.5);
+    const vel = up.clone().multiplyScalar(v0)
+      .add(tangent.clone().multiplyScalar(Math.cos(spreadAngle)*spreadAmt*v0))
+      .add(bitangent.clone().multiplyScalar(Math.sin(spreadAngle)*spreadAmt*v0));
+
+    aOrigin.set([origin.x, origin.y, origin.z], idx*3);
+    aVel.set([vel.x, vel.y, vel.z], idx*3);
+    aGrav.set([up.x*g, up.y*g, up.z*g], idx*3);
+    aLife[idx] = life;
+    aPhase[idx] = Math.random() * life * 3.0;
+    aSeed[idx] = Math.random();
+    idx++;
+  }
+}
+pGeo.setAttribute('aOrigin', new THREE.BufferAttribute(aOrigin, 3));
+pGeo.setAttribute('aVel', new THREE.BufferAttribute(aVel, 3));
+pGeo.setAttribute('aGrav', new THREE.BufferAttribute(aGrav, 3));
+pGeo.setAttribute('aLife', new THREE.BufferAttribute(aLife, 1));
+pGeo.setAttribute('aPhase', new THREE.BufferAttribute(aPhase, 1));
+pGeo.setAttribute('aSeed', new THREE.BufferAttribute(aSeed, 1));
+pGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(total*3), 3)); // placeholder, computed in shader
+
+const plumeMat = new THREE.ShaderMaterial({
+  uniforms: { uTime: { value: 0 } },
+  transparent: true,
+  depthWrite: false,
+  blending: THREE.AdditiveBlending,
+  vertexShader: `
+    attribute vec3 aOrigin, aVel, aGrav;
+    attribute float aLife, aPhase, aSeed;
+    uniform float uTime;
+    varying float vAlpha;
+    varying float vT;
+    void main(){
+      float age = mod(uTime + aPhase, aLife);
+      float tn = age / aLife;
+      vec3 pos = aOrigin + aVel*age - 0.5*aGrav*age*age;
+      vAlpha = smoothstep(0.0,0.06,tn) * (1.0 - smoothstep(0.7,1.0,tn));
+      vT = tn;
+      vec4 mv = modelViewMatrix * vec4(pos,1.0);
+      float dist = max(-mv.z, 0.5);
+      gl_PointSize = min((3.0 + 2.0*aSeed) * (300.0/dist), 16.0);
+      gl_Position = projectionMatrix * mv;
+      if (-mv.z <= 0.0) { gl_Position = vec4(2.0, 2.0, 2.0, 1.0); }
+    }
+  `,
+  fragmentShader: `
+    varying float vAlpha;
+    varying float vT;
+    void main(){
+      vec2 uv = gl_PointCoord - 0.5;
+      float d = length(uv);
+      if (d > 0.5) discard;
+      float core = smoothstep(0.5, 0.0, d);
+      vec3 hot = vec3(1.0, 0.95, 0.75);
+      vec3 cool = vec3(0.95, 0.35, 0.08);
+      vec3 col = mix(cool, hot, 1.0 - vT);
+      gl_FragColor = vec4(col, core * vAlpha);
+    }
+  `,
+});
+const plumes = new THREE.Points(pGeo, plumeMat);
+scene.add(plumes);
+
+// ---------- Jupiter backdrop ----------
+// real NASA/JPL Cassini cylindrical map (PIA07782, Dec 2000) — the old procedural bands
+// were computed purely from latitude, which is perfectly symmetric around the spin axis,
+// so rotating the sphere never visibly moved them; real turbulence fixes that too
+const jupiterColorMap = texLoader.load('./textures/jupiter_map.jpg');
+jupiterColorMap.colorSpace = THREE.SRGBColorSpace;
+jupiterColorMap.wrapS = THREE.RepeatWrapping;
+
+const jupMat = new THREE.ShaderMaterial({
+  uniforms: { uLightDir: { value: LIGHT_DIR }, uColorMap: { value: jupiterColorMap } },
+  fragmentShader: `
+    uniform vec3 uLightDir;
+    uniform sampler2D uColorMap;
+    varying vec2 vUv;
+    varying vec3 vNormal;
+    void main(){
+      vec3 col = texture2D(uColorMap, vUv).rgb;
+      float diff = max(dot(normalize(vNormal), uLightDir), 0.0);
+      col *= (0.2 + diff*0.9);
+      gl_FragColor = vec4(col, 1.0);
+    }
+  `,
+  vertexShader: `
+    varying vec2 vUv;
+    varying vec3 vNormal;
+    void main(){
+      vUv = uv;
+      vNormal = normalize(normalMatrix * normal);
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0);
+    }
+  `,
+});
+const jupiter = new THREE.Mesh(new THREE.SphereGeometry(34, 64, 64), jupMat);
+jupiter.position.set(-58, 14, -95);
+scene.add(jupiter);
+
+// faint plasma-torus flourish (Io's real plasma torus, stylized)
+const torusPts = 2000;
+const torusGeo = new THREE.BufferGeometry();
+const torusPos = new Float32Array(torusPts*3);
+for (let i=0;i<torusPts;i++){
+  const a = Math.random()*Math.PI*2;
+  const r = 5.6 + (Math.random()-0.5)*0.7;
+  const y = (Math.random()-0.5)*0.5;
+  torusPos[i*3] = Math.cos(a)*r;
+  torusPos[i*3+1] = y;
+  torusPos[i*3+2] = Math.sin(a)*r;
+}
+torusGeo.setAttribute('position', new THREE.BufferAttribute(torusPos,3));
+const torusMat = new THREE.PointsMaterial({ color: 0xffaa55, size: 0.02, transparent:true, opacity:0.28, blending: THREE.AdditiveBlending, depthWrite:false });
+const plasmaTorus = new THREE.Points(torusGeo, torusMat);
+scene.add(plasmaTorus);
+
+// ---------- starfield ----------
+const starCount = 1200;
+const starGeo = new THREE.BufferGeometry();
+const starPos = new Float32Array(starCount*3);
+for (let i=0;i<starCount;i++){
+  const r = 60 + Math.random()*180;
+  const theta = Math.random()*Math.PI*2;
+  const phi = Math.acos((Math.random()*2)-1);
+  starPos[i*3] = r*Math.sin(phi)*Math.cos(theta);
+  starPos[i*3+1] = r*Math.cos(phi);
+  starPos[i*3+2] = r*Math.sin(phi)*Math.sin(theta);
+}
+starGeo.setAttribute('position', new THREE.BufferAttribute(starPos,3));
+const starMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.045, transparent:true, opacity:0.7 });
+scene.add(new THREE.Points(starGeo, starMat));
+
+// ---------- HUD labels ----------
+const labelsRoot = document.getElementById('labels');
+const labelEls = VOLCANOES.map(v => {
+  const el = document.createElement('div');
+  el.className = 'label';
+  el.innerHTML = `<div class="ring"></div><div class="dot"></div>${v.name}`;
+  labelsRoot.appendChild(el);
+  return el;
+});
+
+// ---------- mouse parallax ----------
+let mouseX = 0, mouseY = 0;
+addEventListener('pointermove', (e) => {
+  mouseX = (e.clientX / innerWidth - 0.5) * 2;
+  mouseY = (e.clientY / innerHeight - 0.5) * 2;
+});
+addEventListener('resize', () => {
+  camera.aspect = innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+  composer.setSize(innerWidth, innerHeight);
+});
+
+// ---------- animate ----------
+// Capped well below native refresh (this display runs 120Hz) — a slowly rotating moon
+// gains nothing from >30fps, and uncapped rAF was pegging a CPU core near 100%
+// continuously, leaving zero headroom before a GPU driver timeout when running as an
+// always-on wallpaper. This cuts steady-state render work to roughly a quarter.
+const TARGET_FPS = 30;
+const FRAME_INTERVAL = 1000 / TARGET_FPS;
+let lastFrameTime = 0;
+
+const clock = new THREE.Clock();
+const tmpV = new THREE.Vector3();
+let missionStart = performance.now();
+
+function animate(now){
+  requestAnimationFrame(animate);
+  if (now - lastFrameTime < FRAME_INTERVAL) return;
+  lastFrameTime = now;
+
+  const t = clock.getElapsedTime();
+  ioUniforms.uTime.value = t;
+  plumeMat.uniforms.uTime.value = t;
+
+  // camera stays put (just gentle mouse parallax) so the moon's own spin actually reads
+  ioMesh.rotation.y = t * 0.09;
+  jupiter.rotation.y = t * 0.01;
+  plasmaTorus.rotation.y = t * 0.015;
+
+  camera.position.x = mouseX * 0.8;
+  camera.position.z = 9.5;
+  camera.position.y = 1.6 - mouseY * 0.5;
+  camera.lookAt(0,0,0);
+
+  ioMesh.updateMatrixWorld();
+  labelEls.forEach((el, i) => {
+    const worldPos = siteDirs[i].clone().multiplyScalar(IO_RADIUS * 1.03).applyMatrix4(ioMesh.matrixWorld);
+    const toCam = tmpV.copy(worldPos).sub(camera.position);
+    const facing = toCam.normalize().dot(worldPos.clone().normalize().negate()) ;
+    const ndc = worldPos.clone().project(camera);
+    const visible = ndc.z < 1 && facing > -0.15;
+    if (visible) {
+      el.style.left = ((ndc.x*0.5+0.5) * innerWidth) + 'px';
+      el.style.top = ((1 - (ndc.y*0.5+0.5)) * innerHeight) + 'px';
+      el.style.opacity = Math.min(1, (facing+0.15)*3);
+    } else {
+      el.style.opacity = 0;
+    }
+  });
+
+  const elapsed = Math.floor((performance.now() - missionStart)/1000);
+  const hh = String(Math.floor(elapsed/3600)).padStart(2,'0');
+  const mm = String(Math.floor((elapsed%3600)/60)).padStart(2,'0');
+  const ss = String(elapsed%60).padStart(2,'0');
+  const clockEl = document.getElementById('clock');
+  if (clockEl) clockEl.textContent = `${hh}:${mm}:${ss}`;
+
+  composer.render();
+}
+requestAnimationFrame(animate);
+</script>
+</body>
+</html>

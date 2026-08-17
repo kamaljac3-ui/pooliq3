@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Europa // Plume Watch</title>
+<style>
+  html,body{margin:0;padding:0;overflow:hidden;background:#03060a;height:100%;}
+  canvas{display:block;}
+  #hud{
+    position:fixed; top:0; left:0; right:0; padding:28px 40px; pointer-events:none;
+    font-family:'Consolas','SFMono-Regular',monospace; color:#9fe8ff; z-index:10;
+    display:flex; justify-content:space-between; align-items:flex-start;
+    text-shadow:0 0 12px rgba(120,210,255,0.5);
+  }
+  #hud h1{font-size:1.05rem; letter-spacing:0.12em; margin:0; font-weight:600; text-transform:uppercase;}
+  #hud .tag{font-size:0.68rem; opacity:0.6; margin-top:6px; max-width:340px; line-height:1.5;}
+  #hud .stats{font-size:0.7rem; text-align:right; opacity:0.85; line-height:1.7;}
+  #hud .stats b{color:#d8f6ff;}
+  #vignette{
+    position:fixed; inset:0; pointer-events:none; z-index:9;
+    background:radial-gradient(ellipse at center, rgba(0,0,0,0) 40%, rgba(0,0,0,0.7) 100%);
+  }
+  #scan{
+    position:fixed; inset:0; pointer-events:none; z-index:8; opacity:0.04;
+    background:repeating-linear-gradient(0deg, #000 0px, #000 1px, transparent 1px, transparent 3px);
+  }
+  .label{
+    position:fixed; z-index:11; pointer-events:none; transform:translate(-50%,-100%);
+    font-family:'Consolas','SFMono-Regular',monospace; font-size:0.62rem; color:#8fdcff;
+    text-shadow:0 0 8px rgba(120,210,255,0.8); white-space:nowrap; opacity:0;
+    transition:opacity 0.3s;
+  }
+  .label.plume{ color:#c9f4ff; }
+  .label .dot{
+    width:5px; height:5px; border-radius:50%; background:#9fe8ff; margin:0 auto 4px;
+    box-shadow:0 0 8px 2px rgba(120,210,255,0.9);
+  }
+  .label .ring{
+    position:absolute; left:50%; top:2px; width:16px; height:16px; margin-left:-8px;
+    border:1px solid rgba(120,210,255,0.55); border-radius:50%;
+  }
+</style>
+</head>
+<body>
+<div id="hud">
+  <div>
+    <h1>Europa // Plume Watch</h1>
+    <div class="tag">Procedural ice-shell render — stylized, not survey-accurate. Plume sites gated to Thera &amp; Thrace Macula, the real candidate source regions from Hubble's 2013/2014 water-vapor detections.</div>
+  </div>
+  <div class="stats" id="stats">
+    distance from Jupiter: 671,100 km<br>
+    surface temp: <b>-171&deg;C</b> ambient<br>
+    plume watch: <b id="plumeStatus">quiet</b><br>
+    mission clock: <b id="clock">00:00:00</b>
+  </div>
+</div>
+<div id="scan"></div>
+<div id="vignette"></div>
+<div id="labels"></div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+
+// ---------- setup ----------
+const scene = new THREE.Scene();
+scene.fog = new THREE.FogExp2(0x03060a, 0.012);
+
+const camera = new THREE.PerspectiveCamera(50, innerWidth/innerHeight, 0.1, 500);
+camera.position.set(0, 1.6, 9.5);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(innerWidth, innerHeight);
+renderer.setPixelRatio(1); // keep bloom render targets in lockstep with canvas size
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.0;
+document.body.appendChild(renderer.domElement);
+
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.4, 0.3, 0.94);
+composer.addPass(bloom);
+composer.addPass(new OutputPass());
+
+const LIGHT_DIR = new THREE.Vector3(1, 0.35, 0.55).normalize();
+
+// ---------- named surface features (approximate, stylized — not survey-accurate) ----------
+// hasPlume flags Thera & Thrace Macula — the real candidate source regions for Europa's
+// intermittent water-vapor plumes (Roth et al. 2014, Hubble STIS detections)
+const FEATURES = [
+  { name: 'Pwyll',           lat: -25, lon: 271, hasPlume: false },
+  { name: 'Conamara Chaos',  lat: 9,   lon: 274, hasPlume: false },
+  { name: 'Thera Macula',    lat: -46, lon: 180, hasPlume: true  },
+  { name: 'Thrace Macula',   lat: -50, lon: 170, hasPlume: true  },
+  { name: 'Cilix',           lat: -3,  lon: 182, hasPlume: false },
+  { name: 'Castalia Macula', lat: 3,   lon: 27,  hasPlume: false },
+];
+function sphDir(latDeg, lonDeg) {
+  const lat = latDeg * Math.PI/180, lon = lonDeg * Math.PI/180;
+  return new THREE.Vector3(Math.cos(lat)*Math.cos(lon), Math.sin(lat), Math.cos(lat)*Math.sin(lon)).normalize();
+}
+const siteDirs = FEATURES.map(v => sphDir(v.lat, v.lon));
+const plumeSites = FEATURES.map((v,i) => v.hasPlume ? i : -1).filter(i => i >= 0);
+
+// ---------- shared GLSL noise ----------
+const NOISE_GLSL = `
+  float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7))) * 43758.5453123); }
+  float vnoise(vec2 p){
+    vec2 i = floor(p), f = fract(p);
+    float a = hash(i), b = hash(i+vec2(1.0,0.0)), c = hash(i+vec2(0.0,1.0)), d = hash(i+vec2(1.0,1.0));
+    vec2 u = f*f*(3.0-2.0*f);
+    return mix(a,b,u.x) + (c-a)*u.y*(1.0-u.x) + (d-b)*u.x*u.y;
+  }
+  float fbm(vec2 p){
+    float v = 0.0, amp = 0.5;
+    for (int i=0;i<7;i++){ v += amp*vnoise(p); p *= 2.08; amp *= 0.52; }
+    return v;
+  }
+`;
+
+// ---------- Europa ----------
+const EUROPA_RADIUS = 2.3;
+const texLoader = new THREE.TextureLoader();
+const europaColorMap = texLoader.load('./textures/europa_map.jpg');
+europaColorMap.colorSpace = THREE.SRGBColorSpace;
+europaColorMap.wrapS = THREE.RepeatWrapping;
+europaColorMap.anisotropy = 4;
+
+const euUniforms = {
+  uTime: { value: 0 },
+  uLightDir: { value: LIGHT_DIR },
+  uSites: { value: siteDirs.map(d => d.clone()) },
+  uPlumeEnv: { value: [0, 0] }, // per-plume-site eruption envelope, 0..1
+  uColorMap: { value: europaColorMap },
+  uLonOffset: { value: 0.5 },
+};
+const euMat = new THREE.ShaderMaterial({
+  uniforms: euUniforms,
+  vertexShader: `
+    varying vec3 vObjNormal;
+    varying vec3 vWorldNormal;
+    varying vec3 vWorldPos;
+    void main(){
+      vObjNormal = normalize(position);
+      vWorldNormal = normalize(normalMatrix * normal);
+      vWorldPos = (modelMatrix * vec4(position,1.0)).xyz;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0);
+    }
+  `,
+  fragmentShader: `
+    ${NOISE_GLSL}
+    uniform float uTime;
+    uniform vec3 uLightDir;
+    uniform vec3 uSites[6];
+    uniform float uPlumeEnv[2];
+    uniform sampler2D uColorMap;
+    uniform float uLonOffset;
+    varying vec3 vObjNormal;
+    varying vec3 vWorldNormal;
+    varying vec3 vWorldPos;
+
+    void main(){
+      vec3 n = normalize(vObjNormal);
+      // this mosaic (Moon_Europa_color_map.jpg) is standard plate-carree / equirectangular
+      vec2 uv = vec2(fract(atan(n.z, n.x)/6.2831853 + uLonOffset), asin(n.y)/3.14159265 + 0.5);
+
+      vec3 rawCol = texture2D(uColorMap, uv).rgb;
+      float height = dot(rawCol, vec3(0.299,0.587,0.114)); // luminance as a relief proxy, off the raw scan
+
+      // the raw USGS global mosaic carries a uniform warm cast (measured: blue channel
+      // running ~20% low relative to red across every sample, independent of terrain) —
+      // a fixed white-balance correction, then a mild saturation/contrast lift the way
+      // NASA's own public "realistic color" releases are graded from this same data
+      vec3 col = rawCol * vec3(0.96, 1.03, 1.28);
+      vec3 gray = vec3(dot(col, vec3(0.299,0.587,0.114)));
+      col = mix(gray, col, 1.3);
+      col = clamp((col - 0.5) * 1.10 + 0.5, 0.0, 1.0);
+
+      // screen-space bump mapping for icy relief (real cracks read as real ridges/grooves)
+      vec3 Nn = normalize(vWorldNormal);
+      vec3 dPosX = dFdx(vWorldPos);
+      vec3 dPosY = dFdy(vWorldPos);
+      float dHx = dFdx(height);
+      float dHy = dFdy(height);
+      vec3 R1 = cross(dPosY, Nn);
+      vec3 R2 = cross(Nn, dPosX);
+      float det = dot(dPosX, R1);
+      vec3 surfGrad = sign(det) * (dHx*R1 + dHy*R2);
+      vec3 bumpN = normalize(abs(det) * Nn - 1.0 * surfGrad);
+
+      float diff = max(dot(bumpN, uLightDir), 0.0);
+      float lit = 0.22 + diff * 0.95;
+      vec3 shaded = col * lit;
+
+      // faint icy-blue glow at the base of an active plume site, gated by its eruption envelope
+      vec3 glow = vec3(0.0);
+      for (int i=0;i<2;i++){
+        float d = distance(n, uSites[i+2]); // sites index 2,3 = Thera, Thrace
+        float g = smoothstep(0.16, 0.0, d) * uPlumeEnv[i];
+        glow += vec3(0.55, 0.85, 1.0) * g * 1.6;
+      }
+
+      gl_FragColor = vec4(shaded + glow, 1.0);
+    }
+  `,
+});
+const europaMesh = new THREE.Mesh(new THREE.SphereGeometry(EUROPA_RADIUS, 128, 128), euMat);
+scene.add(europaMesh);
+
+// ---------- intermittent water-vapor plume fountains (Thera & Thrace only) ----------
+const PER_SITE = 70;
+const total = PER_SITE * plumeSites.length;
+const pGeo = new THREE.BufferGeometry();
+const aOrigin = new Float32Array(total*3);
+const aVel = new Float32Array(total*3);
+const aGrav = new Float32Array(total*3);
+const aLife = new Float32Array(total);
+const aPhase = new Float32Array(total);
+const aSeed = new Float32Array(total);
+const aSiteIdx = new Float32Array(total);
+
+// each plume site gets its own long duty cycle: mostly quiet, occasional burst — like
+// the real intermittent (not continuous) nature of Europa's suspected plumes
+const CYCLE = [22.0, 27.0];   // seconds per full quiet/burst cycle, per site
+const BURST = [4.5, 3.5];     // seconds actually erupting within that cycle
+const CYCLE_PHASE = [0.0, 12.0];
+
+let idx = 0;
+for (let s = 0; s < plumeSites.length; s++) {
+  const dir = siteDirs[plumeSites[s]];
+  const up = dir;
+  const tangent = new THREE.Vector3(0,1,0).cross(up).lengthSq() < 0.001
+    ? new THREE.Vector3(1,0,0).cross(up).normalize()
+    : new THREE.Vector3(0,1,0).cross(up).normalize();
+  const bitangent = up.clone().cross(tangent).normalize();
+
+  for (let i = 0; i < PER_SITE; i++) {
+    const origin = up.clone().multiplyScalar(EUROPA_RADIUS * 1.01);
+    const g = 2.0;
+    const targetHeight = 0.5 + Math.random() * 0.9; // Europa's plumes are tall, thin geysers
+    const v0 = Math.sqrt(2 * g * targetHeight);
+    const life = (2 * v0) / g;
+    const spreadAngle = Math.random() * Math.PI * 2;
+    const spreadAmt = 0.04 + Math.random()*0.10; // narrow jet, not a wide fountain
+    const vel = up.clone().multiplyScalar(v0)
+      .add(tangent.clone().multiplyScalar(Math.cos(spreadAngle)*spreadAmt*v0))
+      .add(bitangent.clone().multiplyScalar(Math.sin(spreadAngle)*spreadAmt*v0));
+
+    aOrigin.set([origin.x, origin.y, origin.z], idx*3);
+    aVel.set([vel.x, vel.y, vel.z], idx*3);
+    aGrav.set([up.x*g, up.y*g, up.z*g], idx*3);
+    aLife[idx] = life;
+    aPhase[idx] = Math.random() * life * 3.0;
+    aSeed[idx] = Math.random();
+    aSiteIdx[idx] = s;
+    idx++;
+  }
+}
+pGeo.setAttribute('aOrigin', new THREE.BufferAttribute(aOrigin, 3));
+pGeo.setAttribute('aVel', new THREE.BufferAttribute(aVel, 3));
+pGeo.setAttribute('aGrav', new THREE.BufferAttribute(aGrav, 3));
+pGeo.setAttribute('aLife', new THREE.BufferAttribute(aLife, 1));
+pGeo.setAttribute('aPhase', new THREE.BufferAttribute(aPhase, 1));
+pGeo.setAttribute('aSeed', new THREE.BufferAttribute(aSeed, 1));
+pGeo.setAttribute('aSiteIdx', new THREE.BufferAttribute(aSiteIdx, 1));
+pGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(total*3), 3));
+
+const plumeMat = new THREE.ShaderMaterial({
+  uniforms: { uTime: { value: 0 }, uPlumeEnv: { value: [0, 0] } },
+  transparent: true,
+  depthWrite: false,
+  blending: THREE.AdditiveBlending,
+  vertexShader: `
+    attribute vec3 aOrigin, aVel, aGrav;
+    attribute float aLife, aPhase, aSeed, aSiteIdx;
+    uniform float uTime;
+    uniform float uPlumeEnv[2];
+    varying float vAlpha;
+    varying float vT;
+    void main(){
+      float age = mod(uTime + aPhase, aLife);
+      float tn = age / aLife;
+      vec3 pos = aOrigin + aVel*age - 0.5*aGrav*age*age;
+      float env = aSiteIdx < 0.5 ? uPlumeEnv[0] : uPlumeEnv[1];
+      vAlpha = smoothstep(0.0,0.08,tn) * (1.0 - smoothstep(0.7,1.0,tn)) * env;
+      vT = tn;
+      vec4 mv = modelViewMatrix * vec4(pos,1.0);
+      float dist = max(-mv.z, 0.5);
+      gl_PointSize = min((2.5 + 1.5*aSeed) * (300.0/dist), 14.0);
+      gl_Position = projectionMatrix * mv;
+      if (-mv.z <= 0.0 || env <= 0.001) { gl_Position = vec4(2.0, 2.0, 2.0, 1.0); }
+    }
+  `,
+  fragmentShader: `
+    varying float vAlpha;
+    varying float vT;
+    void main(){
+      vec2 uv = gl_PointCoord - 0.5;
+      float d = length(uv);
+      if (d > 0.5) discard;
+      float core = smoothstep(0.5, 0.0, d);
+      vec3 hot = vec3(0.95, 0.99, 1.0);
+      vec3 cool = vec3(0.55, 0.78, 0.95);
+      vec3 col = mix(cool, hot, 1.0 - vT);
+      gl_FragColor = vec4(col, core * vAlpha);
+    }
+  `,
+});
+const plumes = new THREE.Points(pGeo, plumeMat);
+scene.add(plumes);
+
+// ---------- Jupiter backdrop (same host planet as Europa) ----------
+// real NASA/JPL Cassini cylindrical map (PIA07782, Dec 2000) — the old procedural bands
+// were computed purely from latitude, which is perfectly symmetric around the spin axis,
+// so rotating the sphere never visibly moved them; real turbulence fixes that too
+const jupiterColorMap = texLoader.load('./textures/jupiter_map.jpg');
+jupiterColorMap.colorSpace = THREE.SRGBColorSpace;
+jupiterColorMap.wrapS = THREE.RepeatWrapping;
+
+const jupMat = new THREE.ShaderMaterial({
+  uniforms: { uLightDir: { value: LIGHT_DIR }, uColorMap: { value: jupiterColorMap } },
+  fragmentShader: `
+    uniform vec3 uLightDir;
+    uniform sampler2D uColorMap;
+    varying vec2 vUv;
+    varying vec3 vNormal;
+    void main(){
+      vec3 col = texture2D(uColorMap, vUv).rgb;
+      float diff = max(dot(normalize(vNormal), uLightDir), 0.0);
+      col *= (0.2 + diff*0.9);
+      gl_FragColor = vec4(col, 1.0);
+    }
+  `,
+  vertexShader: `
+    varying vec2 vUv;
+    varying vec3 vNormal;
+    void main(){
+      vUv = uv;
+      vNormal = normalize(normalMatrix * normal);
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0);
+    }
+  `,
+});
+const jupiter = new THREE.Mesh(new THREE.SphereGeometry(34, 64, 64), jupMat);
+jupiter.position.set(58, -10, -95);
+scene.add(jupiter);
+
+// ---------- starfield ----------
+const starCount = 1200;
+const starGeo = new THREE.BufferGeometry();
+const starPos = new Float32Array(starCount*3);
+for (let i=0;i<starCount;i++){
+  const r = 60 + Math.random()*180;
+  const theta = Math.random()*Math.PI*2;
+  const phi = Math.acos((Math.random()*2)-1);
+  starPos[i*3] = r*Math.sin(phi)*Math.cos(theta);
+  starPos[i*3+1] = r*Math.cos(phi);
+  starPos[i*3+2] = r*Math.sin(phi)*Math.sin(theta);
+}
+starGeo.setAttribute('position', new THREE.BufferAttribute(starPos,3));
+const starMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.045, transparent:true, opacity:0.7 });
+scene.add(new THREE.Points(starGeo, starMat));
+
+// ---------- HUD labels ----------
+const labelsRoot = document.getElementById('labels');
+const labelEls = FEATURES.map(v => {
+  const el = document.createElement('div');
+  el.className = 'label' + (v.hasPlume ? ' plume' : '');
+  el.innerHTML = `<div class="ring"></div><div class="dot"></div>${v.name}${v.hasPlume ? ' ❄' : ''}`;
+  labelsRoot.appendChild(el);
+  return el;
+});
+
+// ---------- mouse parallax ----------
+let mouseX = 0, mouseY = 0;
+addEventListener('pointermove', (e) => {
+  mouseX = (e.clientX / innerWidth - 0.5) * 2;
+  mouseY = (e.clientY / innerHeight - 0.5) * 2;
+});
+addEventListener('resize', () => {
+  camera.aspect = innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+  composer.setSize(innerWidth, innerHeight);
+});
+
+// ---------- animate ----------
+// Capped well below native refresh (this display runs 120Hz) — a slowly rotating moon
+// gains nothing from >30fps, and uncapped rAF was pegging a CPU core near 100%
+// continuously, leaving zero headroom before a GPU driver timeout when running as an
+// always-on wallpaper. This cuts steady-state render work to roughly a quarter.
+const TARGET_FPS = 30;
+const FRAME_INTERVAL = 1000 / TARGET_FPS;
+let lastFrameTime = 0;
+
+const clock = new THREE.Clock();
+const tmpV = new THREE.Vector3();
+let missionStart = performance.now();
+
+function plumeEnvelope(t, site){
+  const local = (t + CYCLE_PHASE[site]) % CYCLE[site];
+  if (local > BURST[site]) return 0.0;
+  const x = local / BURST[site];
+  return Math.sin(Math.PI * x); // smooth ramp up and down within the burst window
+}
+
+function animate(now){
+  requestAnimationFrame(animate);
+  if (now - lastFrameTime < FRAME_INTERVAL) return;
+  lastFrameTime = now;
+
+  const t = clock.getElapsedTime();
+  euUniforms.uTime.value = t;
+  plumeMat.uniforms.uTime.value = t;
+
+  const env0 = plumeEnvelope(t, 0);
+  const env1 = plumeEnvelope(t, 1);
+  euUniforms.uPlumeEnv.value[0] = env0; euUniforms.uPlumeEnv.value[1] = env1;
+  plumeMat.uniforms.uPlumeEnv.value[0] = env0; plumeMat.uniforms.uPlumeEnv.value[1] = env1;
+
+  // camera stays put (just gentle mouse parallax) so the moon's own slow spin reads clearly
+  europaMesh.rotation.y = t * 0.09;
+  jupiter.rotation.y = t * 0.01;
+
+  camera.position.x = mouseX * 0.8;
+  camera.position.z = 9.5;
+  camera.position.y = 1.6 - mouseY * 0.5;
+  camera.lookAt(0,0,0);
+
+  europaMesh.updateMatrixWorld();
+  labelEls.forEach((el, i) => {
+    const worldPos = siteDirs[i].clone().multiplyScalar(EUROPA_RADIUS * 1.03).applyMatrix4(europaMesh.matrixWorld);
+    const toCam = tmpV.copy(worldPos).sub(camera.position);
+    const facing = toCam.normalize().dot(worldPos.clone().normalize().negate());
+    const ndc = worldPos.clone().project(camera);
+    const visible = ndc.z < 1 && facing > -0.15;
+    if (visible) {
+      el.style.left = ((ndc.x*0.5+0.5) * innerWidth) + 'px';
+      el.style.top = ((1 - (ndc.y*0.5+0.5)) * innerHeight) + 'px';
+      el.style.opacity = Math.min(1, (facing+0.15)*3);
+    } else {
+      el.style.opacity = 0;
+    }
+  });
+
+  const elapsed = Math.floor((performance.now() - missionStart)/1000);
+  const hh = String(Math.floor(elapsed/3600)).padStart(2,'0');
+  const mm = String(Math.floor((elapsed%3600)/60)).padStart(2,'0');
+  const ss = String(elapsed%60).padStart(2,'0');
+  const clockEl = document.getElementById('clock');
+  if (clockEl) clockEl.textContent = `${hh}:${mm}:${ss}`;
+
+  const statusEl = document.getElementById('plumeStatus');
+  if (statusEl) {
+    const active = [env0 > 0.05, env1 > 0.05];
+    if (active[0] && active[1]) statusEl.textContent = 'Thera + Thrace erupting';
+    else if (active[0]) statusEl.textContent = 'Thera Macula erupting';
+    else if (active[1]) statusEl.textContent = 'Thrace Macula erupting';
+    else statusEl.textContent = 'quiet';
+  }
+
+  composer.render();
+}
+requestAnimationFrame(animate);
+</script>
+</body>
+</html>

@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Portfolio Prototype — Jupiter</title>
+<style>
+  html,body{margin:0;padding:0;overflow:hidden;background:#03040a;height:100%;}
+  canvas{display:block;}
+  #hud{
+    position:fixed; top:0; left:0; right:0; padding:28px 40px; pointer-events:none;
+    font-family:'Consolas','SFMono-Regular',monospace; color:#cfe0ff; z-index:10;
+    display:flex; justify-content:space-between; align-items:flex-start;
+    text-shadow:0 0 12px rgba(140,170,255,0.5);
+  }
+  #hud h1{font-size:1.0rem; letter-spacing:0.14em; margin:0; font-weight:600; text-transform:uppercase;}
+  #hud .tag{font-size:0.66rem; opacity:0.55; margin-top:6px; max-width:340px; line-height:1.5;}
+  #back{
+    position:fixed; top:28px; left:40px; z-index:12; pointer-events:auto;
+    font-family:'Consolas','SFMono-Regular',monospace; font-size:0.75rem; letter-spacing:0.08em;
+    color:#cfe0ff; background:rgba(20,26,46,0.55); border:1px solid rgba(140,170,255,0.4);
+    padding:9px 16px; border-radius:3px; cursor:pointer; text-transform:uppercase;
+    opacity:0; transform:translateY(-6px); transition:opacity 0.35s, transform 0.35s;
+  }
+  #back.show{ opacity:1; transform:translateY(0); pointer-events:auto; }
+  #back:hover{ background:rgba(140,170,255,0.18); }
+  #vignette{
+    position:fixed; inset:0; pointer-events:none; z-index:9;
+    background:radial-gradient(ellipse at center, rgba(0,0,0,0) 40%, rgba(0,0,0,0.72) 100%);
+  }
+  #hint{
+    position:fixed; bottom:26px; left:0; right:0; text-align:center; z-index:10; pointer-events:none;
+    font-family:'Consolas','SFMono-Regular',monospace; font-size:0.68rem; letter-spacing:0.1em;
+    color:#8fa4d8; text-transform:uppercase;
+    opacity:0; transition:opacity 0.4s;
+  }
+  #hint.show{ opacity:0.65; }
+
+  #navArrows{
+    position:fixed; top:50%; left:0; right:0; transform:translateY(-50%);
+    display:flex; justify-content:space-between; padding:0 28px; z-index:12;
+    pointer-events:none; opacity:0; transition:opacity 0.4s;
+  }
+  #navArrows.show{ opacity:1; pointer-events:auto; }
+  #navArrows button{
+    width:52px; height:52px; border-radius:50%;
+    background:rgba(20,26,46,0.5); border:1px solid rgba(140,170,255,0.4);
+    color:#cfe0ff; font-size:1.4rem; font-family:'Consolas','SFMono-Regular',monospace;
+    cursor:pointer; transition:background 0.25s, opacity 0.25s;
+  }
+  #navArrows button:hover{ background:rgba(140,170,255,0.22); }
+  #navArrows button:disabled{ opacity:0.25; cursor:default; pointer-events:none; }
+
+  #dots{
+    position:fixed; right:32px; top:50%; transform:translateY(-50%); z-index:12;
+    display:flex; flex-direction:column; gap:14px; align-items:center;
+    opacity:0; pointer-events:none; transition:opacity 0.4s;
+  }
+  #dots.show{ opacity:1; pointer-events:auto; }
+  #dots button{
+    width:10px; height:10px; padding:0; border-radius:50%; cursor:pointer;
+    background:rgba(140,170,255,0.25); border:1px solid rgba(140,170,255,0.5);
+    transition:background 0.25s, transform 0.25s;
+  }
+  #dots button:hover{ transform:scale(1.25); }
+  #dots button.active{ background:#cfe0ff; box-shadow:0 0 10px 2px rgba(140,170,255,0.8); }
+
+  .videoTitle{
+    position:fixed; z-index:11; pointer-events:none; transform:translate(-50%,-50%);
+    font-family:'Consolas','SFMono-Regular',monospace; font-weight:700;
+    letter-spacing:0.06em; color:#ffffff; mix-blend-mode:difference;
+    white-space:nowrap;
+  }
+  .playHint{
+    position:fixed; z-index:11; pointer-events:auto; cursor:pointer; transform:translate(-50%,-50%);
+    font-family:'Consolas','SFMono-Regular',monospace; font-size:0.85rem; letter-spacing:0.08em;
+    color:#ffffff; mix-blend-mode:difference; white-space:nowrap;
+    padding:8px 16px; border:1px solid rgba(255,255,255,0.6); border-radius:20px;
+  }
+
+  .moonPanel{
+    position:fixed; z-index:11; pointer-events:none; transform:translate(-50%,-50%);
+    text-align:center; opacity:0; transition:opacity 0.25s;
+  }
+  .moonPanelTitle{
+    font-family:'Consolas','SFMono-Regular',monospace; font-weight:700; letter-spacing:0.06em;
+    font-size:0.9em; color:#cfe0ff; text-shadow:0 0 14px rgba(140,170,255,0.7); white-space:nowrap;
+  }
+  .moonPanelSub{
+    font-family:'Consolas','SFMono-Regular',monospace; font-size:0.32em; color:rgba(190,205,255,0.7);
+    margin-top:0.4em; white-space:nowrap;
+  }
+  .moonKicker{
+    position:fixed; z-index:11; pointer-events:none; transform:translate(-50%,-50%);
+    font-family:'Consolas','SFMono-Regular',monospace; font-weight:700; letter-spacing:0.16em;
+    color:rgba(190,212,255,0.8); text-transform:uppercase; white-space:nowrap;
+    text-shadow:0 0 10px rgba(140,170,255,0.55); opacity:0; transition:opacity 0.25s;
+  }
+
+  #lightbox{
+    position:fixed; inset:0; z-index:50; background:rgba(2,4,10,0.92);
+    display:flex; align-items:center; justify-content:center;
+    opacity:0; pointer-events:none; transition:opacity 0.3s;
+  }
+  #lightbox.show{ opacity:1; pointer-events:auto; }
+  #lightbox video{ max-width:88vw; max-height:80vh; border:1px solid rgba(140,170,255,0.4); box-shadow:0 0 60px rgba(80,120,255,0.35); }
+  #lightboxClose{
+    position:fixed; top:28px; right:40px; z-index:51; cursor:pointer;
+    font-family:'Consolas','SFMono-Regular',monospace; font-size:0.9rem; color:#cfe0ff;
+    background:rgba(20,26,46,0.6); border:1px solid rgba(140,170,255,0.4);
+    padding:9px 16px; border-radius:3px;
+    opacity:0; pointer-events:none; transition:opacity 0.3s;
+  }
+  #lightboxClose.show{ opacity:1; pointer-events:auto; }
+
+  #skipIntro{
+    position:fixed; bottom:26px; right:32px; z-index:12; cursor:pointer;
+    font-family:'Consolas','SFMono-Regular',monospace; font-size:0.68rem; letter-spacing:0.1em;
+    color:#8fa4d8; background:rgba(20,26,46,0.4); border:1px solid rgba(140,170,255,0.3);
+    padding:8px 14px; border-radius:3px; text-transform:uppercase;
+    opacity:0.7; transition:opacity 0.3s;
+  }
+  #skipIntro:hover{ opacity:1; }
+  #skipIntro.hide{ display:none; }
+</style>
+</head>
+<body>
+<div id="hud">
+  <div>
+    <h1>Prototype // Orbital Portfolio — Jupiter</h1>
+    <div class="tag">Proof of concept — departure from Earth, arrival at Jupiter, six real Galilean-and-beyond moons as floating category hubs. Placeholder content.</div>
+  </div>
+</div>
+<div id="back">&larr; Back to orbit</div>
+<div id="hint">scroll, click a screen, or use the arrows</div>
+<div id="navArrows">
+  <button id="prevBtn" aria-label="Previous category">&lsaquo;</button>
+  <button id="nextBtn" aria-label="Next category">&rsaquo;</button>
+</div>
+<div id="dots"></div>
+<div id="vignette"></div>
+<div id="lightbox">
+  <video id="lightboxVideo" controls playsinline></video>
+</div>
+<div id="lightboxClose">&times; Close</div>
+<div id="skipIntro">Skip intro &raquo;</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+
+// ---------- setup ----------
+const scene = new THREE.Scene();
+scene.fog = new THREE.FogExp2(0x03040a, 0.0035);
+
+const camera = new THREE.PerspectiveCamera(45, innerWidth/innerHeight, 0.1, 700);
+const OVERVIEW = { pos: new THREE.Vector3(2, 6, 22), look: new THREE.Vector3(0, 0, 0) };
+
+// ---------- multi-stage intro: Earth departure -> warp travel -> Jupiter arrival ----------
+const APPROACH_DIR = OVERVIEW.pos.clone().normalize();
+const EARTH_POS = APPROACH_DIR.clone().multiplyScalar(420);
+const EARTH_RADIUS = 1.6;
+const EARTH_CLOSE = {
+  pos: EARTH_POS.clone().add(new THREE.Vector3(0.8, 0.5, 1.2).normalize().multiplyScalar(EARTH_RADIUS * 1.6)),
+  look: EARTH_POS.clone(),
+};
+const introLegs = [
+  { pos: EARTH_POS.clone().add(APPROACH_DIR.clone().multiplyScalar(18)), look: EARTH_POS.clone(), duration: 1800 }, // pull back from Earth
+  { pos: APPROACH_DIR.clone().multiplyScalar(140), look: new THREE.Vector3(0,0,0), duration: 2200 }, // warp-speed transit
+  { pos: OVERVIEW.pos.clone(), look: OVERVIEW.look.clone(), duration: 2600 }, // decelerate into Jupiter orbit
+];
+let introLegIndex = -1; // -1 = still at EARTH_CLOSE, hasn't started leg 0 yet
+camera.position.copy(EARTH_CLOSE.pos);
+camera.lookAt(EARTH_CLOSE.look);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(innerWidth, innerHeight);
+renderer.setPixelRatio(1);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.0;
+document.body.appendChild(renderer.domElement);
+
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.5, 0.35, 0.86);
+composer.addPass(bloom);
+composer.addPass(new OutputPass());
+
+const LIGHT_DIR = new THREE.Vector3(1, 0.5, 0.4).normalize();
+const sun = new THREE.DirectionalLight(0xffffff, 3.2);
+sun.position.copy(LIGHT_DIR);
+scene.add(sun);
+scene.add(new THREE.AmbientLight(0x223355, 0.8));
+
+const texLoader = new THREE.TextureLoader();
+
+// ---------- Earth (departure point only — real texture, simple lit sphere) ----------
+const earthTex = texLoader.load('./textures/earth_map.jpg');
+earthTex.colorSpace = THREE.SRGBColorSpace;
+const earth = new THREE.Mesh(
+  new THREE.SphereGeometry(EARTH_RADIUS, 48, 48),
+  new THREE.MeshStandardMaterial({ map: earthTex, roughness: 0.75 })
+);
+earth.position.copy(EARTH_POS);
+scene.add(earth);
+
+// ---------- warp-speed star streaks — only during the transit leg ----------
+const warpCount = 700;
+const warpGeo = new THREE.BufferGeometry();
+const warpPos = new Float32Array(warpCount * 2 * 3);
+for (let i = 0; i < warpCount; i++) {
+  const radius = 4 + Math.random() * 45;
+  const angle = Math.random() * Math.PI * 2;
+  const along = (Math.random() - 0.5) * 480; // spread along the travel axis
+  // build the line in a local XY-around-Z frame, then rotate to APPROACH_DIR
+  const local = new THREE.Vector3(Math.cos(angle)*radius, Math.sin(angle)*radius, along);
+  const len = 5 + Math.random() * 14;
+  const localEnd = local.clone(); localEnd.z += len;
+  const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,0,1), APPROACH_DIR);
+  local.applyQuaternion(q); localEnd.applyQuaternion(q);
+  warpPos[i*6+0]=local.x; warpPos[i*6+1]=local.y; warpPos[i*6+2]=local.z;
+  warpPos[i*6+3]=localEnd.x; warpPos[i*6+4]=localEnd.y; warpPos[i*6+5]=localEnd.z;
+}
+warpGeo.setAttribute('position', new THREE.BufferAttribute(warpPos, 3));
+const warpMat = new THREE.LineBasicMaterial({ color: 0xaeccff, transparent: true, opacity: 0.0 });
+const warpLines = new THREE.LineSegments(warpGeo, warpMat);
+scene.add(warpLines);
+
+// ---------- shared GLSL noise (Io/Europa shaders) ----------
+const NOISE_GLSL = `
+  float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7))) * 43758.5453123); }
+  float vnoise(vec2 p){
+    vec2 i = floor(p), f = fract(p);
+    float a = hash(i), b = hash(i+vec2(1.0,0.0)), c = hash(i+vec2(0.0,1.0)), d = hash(i+vec2(1.0,1.0));
+    vec2 u = f*f*(3.0-2.0*f);
+    return mix(a,b,u.x) + (c-a)*u.y*(1.0-u.x) + (d-b)*u.x*u.y;
+  }
+  float fbm(vec2 p){
+    float v = 0.0, amp = 0.5;
+    for (int i=0;i<7;i++){ v += amp*vnoise(p); p *= 2.08; amp *= 0.52; }
+    return v;
+  }
+`;
+function sphDir(latDeg, lonDeg) {
+  const lat = latDeg * Math.PI/180, lon = lonDeg * Math.PI/180;
+  return new THREE.Vector3(Math.cos(lat)*Math.cos(lon), Math.sin(lat), Math.cos(lat)*Math.sin(lon)).normalize();
+}
+
+// ---------- Jupiter (hub) — real NASA/JPL Cassini cylindrical map, same as used behind
+// the Io/Europa standalone scenes, now the central body instead of a distant backdrop.
+// No rings: Jupiter's are real but extremely faint dust rings, not a visual feature —
+// skipping them is the astronomically accurate choice, not a shortcut. ----------
+const JUPITER_RADIUS = 4.5;
+const jupiterTex = texLoader.load('./textures/jupiter_map.jpg');
+jupiterTex.colorSpace = THREE.SRGBColorSpace;
+// no wrapS override: the sphere's built-in UVs never leave [0,1], and forcing
+// RepeatWrapping on a non-power-of-2 image disables mipmapping (WebGL1 constraint),
+// which is what was causing the speckled/aliased "static" look on Io & Europa below.
+const jupiter = new THREE.Mesh(
+  new THREE.SphereGeometry(JUPITER_RADIUS, 96, 96),
+  new THREE.MeshStandardMaterial({ map: jupiterTex, roughness: 0.9 })
+);
+scene.add(jupiter);
+
+// ---------- starfield ----------
+const starCount = 1400;
+const starGeo = new THREE.BufferGeometry();
+const starPos = new Float32Array(starCount*3);
+for (let i=0;i<starCount;i++){
+  const r = 80 + Math.random()*300;
+  const theta = Math.random()*Math.PI*2;
+  const phi = Math.acos((Math.random()*2)-1);
+  starPos[i*3] = r*Math.sin(phi)*Math.cos(theta);
+  starPos[i*3+1] = r*Math.cos(phi);
+  starPos[i*3+2] = r*Math.sin(phi)*Math.sin(theta);
+}
+starGeo.setAttribute('position', new THREE.BufferAttribute(starPos,3));
+scene.add(new THREE.Points(starGeo, new THREE.PointsMaterial({ color:0xffffff, size:0.05, transparent:true, opacity:0.7 })));
+
+// ---------- category moons — Jupiter's six largest, starting at Io ----------
+// Io & Europa reuse the real detailed shaders built for their own standalone scenes:
+// real NASA texture, screen-space bump mapping off the photo's own luminance, glowing
+// named hotspots, and particle plume fountains — not simplified for this page. Ganymede
+// and Callisto use real Björn Jónsson / USGS-derived global maps (verified visually
+// before use) on the same simple textured-sphere treatment as Saturn's moons. Amalthea
+// and Himalia have no public global photo map — too small and too poorly imaged for one
+// to exist — so they're rendered with their real measured color and real elongated
+// proportions instead of a fabricated texture.
+const CATEGORIES = [
+  { title: 'GALLERY', sub: 'Recent builds, in motion', pos: new THREE.Vector3(-2.54, 8.08, 5.20), type: 'io', moon: 'Io', video: true, videoLabel: 'REEL' },
+  { title: 'NEW BUILDS', sub: 'Custom sites, from scratch', pos: new THREE.Vector3(3.50, 5.57, 5.33), type: 'europa', moon: 'Europa' },
+  { title: 'REDESIGNS & REBUILDS', sub: 'New life for an existing site', pos: new THREE.Vector3(-2.42, 3.06, 6.56), type: 'textured', moon: 'Ganymede', tex: './textures/ganymede_map.jpg' },
+  { title: 'SUPPORT & HOSTING', sub: 'Ongoing care after launch', pos: new THREE.Vector3(3.62, 0.55, 6.69), type: 'textured', moon: 'Callisto', tex: './textures/callisto_map.jpg' },
+  { title: 'ABOUT', sub: 'Who’s behind this', pos: new THREE.Vector3(-2.29, -1.96, 7.91), type: 'synthetic', moon: 'Amalthea', color: 0xa8503c, scale: [1.35, 0.92, 0.78] },
+  { title: 'CONTACT', sub: 'Start a project', pos: new THREE.Vector3(3.74, -4.47, 8.05), type: 'synthetic', moon: 'Himalia', color: 0x4a4642, scale: [1.15, 1.08, 0.9] },
+];
+const MOON_RADIUS = 1.15;
+
+const screenObjs = [];
+let ioUniforms = null, ioMesh = null, ioPlumeMat = null, ioVolcanoes = null;
+let euUniforms = null, euMesh = null, euPlumeMat = null, euPlumeEnv = [0,0];
+
+CATEGORIES.forEach((cat, i) => {
+  const group = new THREE.Group();
+  group.position.copy(cat.pos);
+  group.lookAt(0, 0, 0);
+
+  let moon;
+
+  if (cat.type === 'io') {
+    // ---- real Io shader: texture + bump-from-luminance + glowing named volcanoes ----
+    // Real eruption behavior differs a lot per site — showing all six as identical,
+    // permanently-on fountains (the original version of this scene) is a dramatization,
+    // not an observation. Three real behavior classes, applied below:
+    //  - 'lake'          Loki Patera is a ~200km lava lake, not a jet — it undergoes slow
+    //                     periodic overall brightening, not discrete plume bursts, so it
+    //                     gets a wide soft glow that breathes slowly and no particle jet.
+    //  - 'persistent'     Pele and Prometheus have had continuously observed plumes across
+    //                     every mission from Voyager (1979) through New Horizons — the only
+    //                     two sites accurate to show as always-on fountains.
+    //  - 'intermittent'   Pillan Patera (one massive 1997 outburst) and Tvashtar Catena
+    //                     (sporadic outbursts in 1999/2000/2007) are real but episodic —
+    //                     gated by the same kind of duty-cycle envelope used for Europa's
+    //                     plumes below, staggered so they don't all flare in sync. Marduk's
+    //                     plume was also observed intermittently, not continuously.
+    const VOLCANOES = [
+      { name: 'Loki Patera',    lat: 13,  lon: 308, type: 'lake' },
+      { name: 'Pele',           lat: -19, lon: 255, type: 'persistent' },
+      { name: 'Pillan Patera',  lat: -12, lon: 244, type: 'intermittent', cycle: 34, burst: 3.0, phase: 4 },
+      { name: 'Prometheus',     lat: -2,  lon: 153, type: 'persistent' },
+      { name: 'Tvashtar Catena',lat: 63,  lon: 122, type: 'intermittent', cycle: 40, burst: 2.5, phase: 20 },
+      { name: 'Marduk',         lat: -28, lon: 210, type: 'intermittent', cycle: 26, burst: 3.5, phase: 12 },
+    ];
+    const siteDirs = VOLCANOES.map(v => sphDir(v.lat, v.lon));
+    const ioTex = texLoader.load('./textures/io_map.jpg');
+    ioTex.colorSpace = THREE.SRGBColorSpace;
+    // fract() in the shader already wraps u into [0,1) manually — no need for hardware
+    // repeat wrapping, and forcing it on this non-power-of-2 image would disable
+    // mipmapping and cause aliased "static" noise at a distance.
+    ioUniforms = {
+      uTime: { value: 0 }, uLightDir: { value: LIGHT_DIR }, uSites: { value: siteDirs.map(d => d.clone()) },
+      uSiteEnv: { value: [1,1,1,1,1,1] }, uColorMap: { value: ioTex }, uLonOffset: { value: 0.5 },
+    };
+    const ioMat = new THREE.ShaderMaterial({
+      uniforms: ioUniforms,
+      vertexShader: `
+        uniform float uLonOffset;
+        varying vec3 vObjNormal; varying vec3 vWorldNormal; varying vec3 vWorldPos; varying float vMapU;
+        void main(){
+          vObjNormal = normalize(position);
+          vWorldNormal = normalize(normalMatrix * normal);
+          vWorldPos = (modelMatrix * vec4(position,1.0)).xyz;
+          // longitude computed per-VERTEX (then linearly interpolated) rather than
+          // per-fragment: recomputing atan2 from a re-normalized per-fragment normal
+          // makes texture2D's automatic mip/LOD derivative blow up unpredictably
+          // pixel-to-pixel — it read as speckled "static" across the whole surface.
+          vMapU = atan(vObjNormal.z, vObjNormal.x)/6.2831853 + uLonOffset;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0);
+        }
+      `,
+      fragmentShader: `
+        ${NOISE_GLSL}
+        uniform float uTime; uniform vec3 uLightDir; uniform vec3 uSites[6]; uniform float uSiteEnv[6];
+        uniform sampler2D uColorMap; uniform float uLonOffset;
+        varying vec3 vObjNormal; varying vec3 vWorldNormal; varying vec3 vWorldPos; varying float vMapU;
+        void main(){
+          vec3 n = normalize(vObjNormal);
+          vec2 uv = vec2(fract(vMapU), 0.5 + 0.5*n.y);
+          vec3 col = texture2D(uColorMap, uv).rgb;
+          // plain Lambertian on the smooth per-fragment normal — a screen-space
+          // derivative-based bump (the Mikkelsen technique) was tried here but its
+          // per-pixel dFdx/dFdy of a photo-sampled height proved fundamentally noisy
+          // at real-world viewing distances (reads as speckled "static"); the real
+          // photo already carries its own baked-in shading, so flat lighting alone
+          // still reads as a properly lit, detailed surface.
+          vec3 Nn = normalize(vWorldNormal);
+          float diff = max(dot(Nn, uLightDir), 0.0);
+          float lit = 0.20 + diff * 0.95;
+          vec3 shaded = col * lit;
+          vec3 glow = vec3(0.0);
+          for (int i=0;i<6;i++){
+            float d = distance(n, uSites[i]);
+            float env = uSiteEnv[i];
+            // site 0 (Loki Patera) is a wide lava lake, not a point plume — a much
+            // bigger, softer glow radius than the jet sites, with no crisp ring
+            float radius = (i == 0) ? 0.34 : 0.14;
+            float pulse = (i == 0) ? 1.0 : (0.6 + 0.4*sin(uTime*1.6 + float(i)*2.1));
+            float g = smoothstep(radius, 0.0, d) * pulse * env;
+            glow += vec3(1.0, 0.55, 0.15) * g * (i == 0 ? 1.1 : 2.2);
+            if (i != 0) {
+              float ring = smoothstep(0.20,0.16,d) - smoothstep(0.16,0.12,d);
+              glow += vec3(1.0,0.7,0.3) * ring * 0.6 * env;
+            }
+          }
+          gl_FragColor = vec4(shaded + glow, 1.0);
+        }
+      `,
+    });
+    moon = new THREE.Mesh(new THREE.SphereGeometry(MOON_RADIUS, 96, 96), ioMat);
+    ioMesh = moon;
+    ioVolcanoes = VOLCANOES;
+
+    // eruption particle fountains — Loki (site 0) is a lava lake, not a jet, so it gets
+    // no particles at all (see the shader note above); the other five get fountains,
+    // with the intermittent trio's alpha gated live by uSiteEnv (computed in animate())
+    // so they only actually plume during their staggered burst windows, like Europa's.
+    const JET_SITES = [1, 2, 3, 4, 5]; // Pele, Pillan, Prometheus, Tvashtar, Marduk
+    const PER_SITE = 36;
+    const total = PER_SITE * JET_SITES.length;
+    const aOrigin = new Float32Array(total*3), aVel = new Float32Array(total*3), aGrav = new Float32Array(total*3);
+    const aLife = new Float32Array(total), aPhase = new Float32Array(total), aSeed = new Float32Array(total), aSiteIdx = new Float32Array(total);
+    let idx = 0;
+    for (const s of JET_SITES) {
+      const up = siteDirs[s];
+      const tangent = new THREE.Vector3(0,1,0).cross(up).lengthSq() < 0.001
+        ? new THREE.Vector3(1,0,0).cross(up).normalize() : new THREE.Vector3(0,1,0).cross(up).normalize();
+      const bitangent = up.clone().cross(tangent).normalize();
+      // the intermittent sites' real outbursts (Pillan 1997, Tvashtar 1999/2000/2007)
+      // were dramatically bigger than the two persistent plumes — taller arcs when they fire
+      const isIntermittent = VOLCANOES[s].type === 'intermittent';
+      for (let k = 0; k < PER_SITE; k++) {
+        const origin = up.clone().multiplyScalar(MOON_RADIUS * 1.01);
+        const g = 1.5;
+        const targetHeight = (isIntermittent ? 0.30 : 0.18) + Math.random() * (isIntermittent ? 0.42 : 0.32);
+        const v0 = Math.sqrt(2 * g * targetHeight);
+        const life = (2 * v0) / g;
+        const spreadAngle = Math.random() * Math.PI * 2;
+        const spreadAmt = 0.15 + Math.random()*0.5;
+        const vel = up.clone().multiplyScalar(v0)
+          .add(tangent.clone().multiplyScalar(Math.cos(spreadAngle)*spreadAmt*v0))
+          .add(bitangent.clone().multiplyScalar(Math.sin(spreadAngle)*spreadAmt*v0));
+        aOrigin.set([origin.x,origin.y,origin.z], idx*3);
+        aVel.set([vel.x,vel.y,vel.z], idx*3);
+        aGrav.set([up.x*g,up.y*g,up.z*g], idx*3);
+        aLife[idx] = life; aPhase[idx] = Math.random()*life*3.0; aSeed[idx] = Math.random(); aSiteIdx[idx] = s;
+        idx++;
+      }
+    }
+    const pGeo = new THREE.BufferGeometry();
+    pGeo.setAttribute('aOrigin', new THREE.BufferAttribute(aOrigin,3));
+    pGeo.setAttribute('aVel', new THREE.BufferAttribute(aVel,3));
+    pGeo.setAttribute('aGrav', new THREE.BufferAttribute(aGrav,3));
+    pGeo.setAttribute('aLife', new THREE.BufferAttribute(aLife,1));
+    pGeo.setAttribute('aPhase', new THREE.BufferAttribute(aPhase,1));
+    pGeo.setAttribute('aSeed', new THREE.BufferAttribute(aSeed,1));
+    pGeo.setAttribute('aSiteIdx', new THREE.BufferAttribute(aSiteIdx,1));
+    pGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(total*3),3));
+    ioPlumeMat = new THREE.ShaderMaterial({
+      uniforms: { uTime: { value: 0 }, uSiteEnv: { value: [1,1,1,1,1,1] } }, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+      vertexShader: `
+        attribute vec3 aOrigin, aVel, aGrav; attribute float aLife, aPhase, aSeed, aSiteIdx;
+        uniform float uTime; uniform float uSiteEnv[6]; varying float vAlpha; varying float vT;
+        void main(){
+          float age = mod(uTime + aPhase, aLife);
+          float tn = age / aLife;
+          vec3 pos = aOrigin + aVel*age - 0.5*aGrav*age*age;
+          int site = int(aSiteIdx + 0.5);
+          float env = uSiteEnv[0];
+          for (int i=1;i<6;i++){ if (i == site) env = uSiteEnv[i]; }
+          vAlpha = smoothstep(0.0,0.06,tn) * (1.0 - smoothstep(0.7,1.0,tn)) * env;
+          vT = tn;
+          vec4 mv = modelViewMatrix * vec4(pos,1.0);
+          float dist = max(-mv.z, 0.5);
+          gl_PointSize = min((2.0 + 1.4*aSeed) * (300.0/dist), 10.0);
+          gl_Position = projectionMatrix * mv;
+          if (-mv.z <= 0.0 || env <= 0.001) { gl_Position = vec4(2.0,2.0,2.0,1.0); }
+        }
+      `,
+      fragmentShader: `
+        varying float vAlpha; varying float vT;
+        void main(){
+          vec2 uv = gl_PointCoord - 0.5; float d = length(uv);
+          if (d > 0.5) discard;
+          float core = smoothstep(0.5, 0.0, d);
+          vec3 col = mix(vec3(0.95,0.35,0.08), vec3(1.0,0.95,0.75), 1.0 - vT);
+          gl_FragColor = vec4(col, core * vAlpha);
+        }
+      `,
+    });
+    const plumes = new THREE.Points(pGeo, ioPlumeMat);
+    group.add(plumes);
+
+  } else if (cat.type === 'europa') {
+    // ---- real Europa shader: white-balance-corrected texture + bump + intermittent
+    // plume glow at the real candidate source regions (Thera & Thrace Macula) ----
+    const FEATURES = [
+      { name: 'Pwyll', lat: -25, lon: 271 }, { name: 'Conamara Chaos', lat: 9, lon: 274 },
+      { name: 'Thera Macula', lat: -46, lon: 180 }, { name: 'Thrace Macula', lat: -50, lon: 170 },
+      { name: 'Cilix', lat: -3, lon: 182 }, { name: 'Castalia Macula', lat: 3, lon: 27 },
+    ];
+    const siteDirs = FEATURES.map(v => sphDir(v.lat, v.lon));
+    const plumeSiteLocalIdx = [2, 3]; // Thera, Thrace
+    const euTex = texLoader.load('./textures/europa_map.jpg');
+    euTex.colorSpace = THREE.SRGBColorSpace;
+    // (see Io's note above — no wrapS override, fract() in the shader handles wrapping)
+    euUniforms = {
+      uTime: { value: 0 }, uLightDir: { value: LIGHT_DIR }, uSites: { value: siteDirs.map(d => d.clone()) },
+      uPlumeEnv: { value: [0,0] }, uColorMap: { value: euTex }, uLonOffset: { value: 0.5 },
+    };
+    const euMat = new THREE.ShaderMaterial({
+      uniforms: euUniforms,
+      vertexShader: `
+        uniform float uLonOffset;
+        varying vec3 vObjNormal; varying vec3 vWorldNormal; varying vec3 vWorldPos; varying float vMapU;
+        void main(){
+          vObjNormal = normalize(position);
+          vWorldNormal = normalize(normalMatrix * normal);
+          vWorldPos = (modelMatrix * vec4(position,1.0)).xyz;
+          // see the Io shader for why longitude is computed per-vertex, not per-fragment
+          vMapU = atan(vObjNormal.z, vObjNormal.x)/6.2831853 + uLonOffset;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0);
+        }
+      `,
+      fragmentShader: `
+        uniform float uTime; uniform vec3 uLightDir; uniform vec3 uSites[6]; uniform float uPlumeEnv[2];
+        uniform sampler2D uColorMap; uniform float uLonOffset;
+        varying vec3 vObjNormal; varying vec3 vWorldNormal; varying vec3 vWorldPos; varying float vMapU;
+        void main(){
+          vec3 n = normalize(vObjNormal);
+          vec2 uv = vec2(fract(vMapU), asin(n.y)/3.14159265 + 0.5);
+          vec3 rawCol = texture2D(uColorMap, uv).rgb;
+          vec3 col = rawCol * vec3(0.96, 1.03, 1.22);
+          vec3 gray = vec3(dot(col, vec3(0.299,0.587,0.114)));
+          col = mix(gray, col, 1.15);
+          col = clamp((col - 0.5) * 1.05 + 0.5, 0.0, 1.0);
+          // plain Lambertian on the smooth per-fragment normal — see the Io shader
+          // for why the screen-space derivative bump technique was dropped
+          vec3 Nn = normalize(vWorldNormal);
+          float diff = max(dot(Nn, uLightDir), 0.0);
+          float lit = 0.22 + diff * 0.95;
+          vec3 shaded = col * lit;
+          vec3 glow = vec3(0.0);
+          for (int i=0;i<2;i++){
+            float d = distance(n, uSites[i+2]);
+            float g = smoothstep(0.16, 0.0, d) * uPlumeEnv[i];
+            glow += vec3(0.55, 0.85, 1.0) * g * 1.6;
+          }
+          gl_FragColor = vec4(shaded + glow, 1.0);
+        }
+      `,
+    });
+    moon = new THREE.Mesh(new THREE.SphereGeometry(MOON_RADIUS, 96, 96), euMat);
+    euMesh = moon;
+
+    const PER_SITE = 30;
+    const total = PER_SITE * plumeSiteLocalIdx.length;
+    const aOrigin = new Float32Array(total*3), aVel = new Float32Array(total*3), aGrav = new Float32Array(total*3);
+    const aLife = new Float32Array(total), aPhase = new Float32Array(total), aSeed = new Float32Array(total), aSiteIdx = new Float32Array(total);
+    let idx = 0;
+    for (let s = 0; s < plumeSiteLocalIdx.length; s++) {
+      const up = siteDirs[plumeSiteLocalIdx[s]];
+      const tangent = new THREE.Vector3(0,1,0).cross(up).lengthSq() < 0.001
+        ? new THREE.Vector3(1,0,0).cross(up).normalize() : new THREE.Vector3(0,1,0).cross(up).normalize();
+      const bitangent = up.clone().cross(tangent).normalize();
+      for (let k = 0; k < PER_SITE; k++) {
+        const origin = up.clone().multiplyScalar(MOON_RADIUS * 1.01);
+        const g = 1.0;
+        const targetHeight = 0.25 + Math.random()*0.45;
+        const v0 = Math.sqrt(2*g*targetHeight);
+        const life = (2*v0)/g;
+        const spreadAngle = Math.random()*Math.PI*2;
+        const spreadAmt = 0.04 + Math.random()*0.10;
+        const vel = up.clone().multiplyScalar(v0)
+          .add(tangent.clone().multiplyScalar(Math.cos(spreadAngle)*spreadAmt*v0))
+          .add(bitangent.clone().multiplyScalar(Math.sin(spreadAngle)*spreadAmt*v0));
+        aOrigin.set([origin.x,origin.y,origin.z], idx*3);
+        aVel.set([vel.x,vel.y,vel.z], idx*3);
+        aGrav.set([up.x*g,up.y*g,up.z*g], idx*3);
+        aLife[idx]=life; aPhase[idx]=Math.random()*life*3.0; aSeed[idx]=Math.random(); aSiteIdx[idx]=s;
+        idx++;
+      }
+    }
+    const pGeo = new THREE.BufferGeometry();
+    pGeo.setAttribute('aOrigin', new THREE.BufferAttribute(aOrigin,3));
+    pGeo.setAttribute('aVel', new THREE.BufferAttribute(aVel,3));
+    pGeo.setAttribute('aGrav', new THREE.BufferAttribute(aGrav,3));
+    pGeo.setAttribute('aLife', new THREE.BufferAttribute(aLife,1));
+    pGeo.setAttribute('aPhase', new THREE.BufferAttribute(aPhase,1));
+    pGeo.setAttribute('aSeed', new THREE.BufferAttribute(aSeed,1));
+    pGeo.setAttribute('aSiteIdx', new THREE.BufferAttribute(aSiteIdx,1));
+    pGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(total*3),3));
+    euPlumeMat = new THREE.ShaderMaterial({
+      uniforms: { uTime: { value: 0 }, uPlumeEnv: { value: [0,0] } }, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+      vertexShader: `
+        attribute vec3 aOrigin, aVel, aGrav; attribute float aLife, aPhase, aSeed, aSiteIdx;
+        uniform float uTime; uniform float uPlumeEnv[2]; varying float vAlpha; varying float vT;
+        void main(){
+          float age = mod(uTime + aPhase, aLife);
+          float tn = age / aLife;
+          vec3 pos = aOrigin + aVel*age - 0.5*aGrav*age*age;
+          float env = aSiteIdx < 0.5 ? uPlumeEnv[0] : uPlumeEnv[1];
+          vAlpha = smoothstep(0.0,0.08,tn) * (1.0 - smoothstep(0.7,1.0,tn)) * env;
+          vT = tn;
+          vec4 mv = modelViewMatrix * vec4(pos,1.0);
+          float dist = max(-mv.z, 0.5);
+          gl_PointSize = min((1.8 + 1.2*aSeed) * (300.0/dist), 9.0);
+          gl_Position = projectionMatrix * mv;
+          if (-mv.z <= 0.0 || env <= 0.001) { gl_Position = vec4(2.0,2.0,2.0,1.0); }
+        }
+      `,
+      fragmentShader: `
+        varying float vAlpha; varying float vT;
+        void main(){
+          vec2 uv = gl_PointCoord - 0.5; float d = length(uv);
+          if (d > 0.5) discard;
+          float core = smoothstep(0.5, 0.0, d);
+          vec3 col = mix(vec3(0.55,0.78,0.95), vec3(0.95,0.99,1.0), 1.0 - vT);
+          gl_FragColor = vec4(col, core * vAlpha);
+        }
+      `,
+    });
+    const euPlumes = new THREE.Points(pGeo, euPlumeMat);
+    group.add(euPlumes);
+
+  } else if (cat.type === 'textured') {
+    const tex = texLoader.load(cat.tex);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    moon = new THREE.Mesh(new THREE.SphereGeometry(MOON_RADIUS, 64, 64), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.85 }));
+
+  } else { // synthetic — no public global photo map exists for these; real measured color + shape instead
+    moon = new THREE.Mesh(new THREE.SphereGeometry(MOON_RADIUS, 48, 48), new THREE.MeshStandardMaterial({ color: cat.color, roughness: 0.95 }));
+    if (cat.scale) moon.scale.set(cat.scale[0], cat.scale[1], cat.scale[2]);
+  }
+
+  moon.userData.categoryIndex = i;
+  group.add(moon);
+  scene.add(group);
+  screenObjs.push({ group, screen: moon, cat });
+
+  // every moon gets its real name as a small kicker label hovering just above its
+  // category title, in the same lettering the panels already use for it
+  const kickerEl = document.createElement('div');
+  kickerEl.className = 'moonKicker';
+  kickerEl.textContent = cat.moon;
+  document.body.appendChild(kickerEl);
+  screenObjs[screenObjs.length - 1].kickerEl = kickerEl;
+
+  if (cat.video) {
+    const titleEl = document.createElement('div');
+    titleEl.className = 'videoTitle';
+    titleEl.textContent = cat.videoLabel || cat.title;
+    titleEl.style.fontSize = '2.6rem';
+    document.body.appendChild(titleEl);
+    screenObjs[screenObjs.length - 1].titleEl = titleEl;
+
+    const playEl = document.createElement('div');
+    playEl.className = 'playHint';
+    playEl.textContent = '▶ play reel';
+    document.body.appendChild(playEl);
+    screenObjs[screenObjs.length - 1].playEl = playEl;
+  } else {
+    const panelEl = document.createElement('div');
+    panelEl.className = 'moonPanel';
+    panelEl.innerHTML = `<div class="moonPanelTitle">${cat.title}</div><div class="moonPanelSub">${cat.sub}</div>`;
+    document.body.appendChild(panelEl);
+    screenObjs[screenObjs.length - 1].panelEl = panelEl;
+  }
+});
+
+// ---------- camera waypoints & docking ----------
+const DOCK_OFFSET = 3.2;
+function dockWaypointFor(cat){
+  const dir = cat.pos.clone().normalize();
+  const pos = cat.pos.clone().add(dir.multiplyScalar(DOCK_OFFSET));
+  return { pos, look: cat.pos.clone() };
+}
+
+let camFrom = { pos: camera.position.clone(), look: EARTH_CLOSE.look.clone() };
+let camTo = { pos: camera.position.clone(), look: EARTH_CLOSE.look.clone() };
+let tweenStart = 0, tweenDuration = 1600, tweening = false;
+let currentLook = EARTH_CLOSE.look.clone();
+let currentIndex = -1;
+let introDone = false;
+
+function easeInOutCubic(x){ return x < 0.5 ? 4*x*x*x : 1 - Math.pow(-2*x+2,3)/2; }
+
+function startTween(toPos, toLook, duration){
+  camFrom = { pos: camera.position.clone(), look: currentLook.clone() };
+  camTo = { pos: toPos.clone(), look: toLook.clone() };
+  tweenStart = performance.now();
+  tweenDuration = duration;
+  tweening = true;
+}
+
+function advanceIntro(){
+  introLegIndex++;
+  if (introLegIndex >= introLegs.length) {
+    introDone = true;
+    document.getElementById('hint').classList.add('show');
+    document.getElementById('navArrows').classList.add('show');
+    document.getElementById('dots').classList.add('show');
+    document.getElementById('skipIntro').classList.add('hide');
+    updateChrome();
+    return;
+  }
+  const leg = introLegs[introLegIndex];
+  startTween(leg.pos, leg.look, leg.duration);
+}
+
+function skipIntro(){
+  introLegIndex = introLegs.length; // force completion
+  camera.position.copy(OVERVIEW.pos);
+  currentLook.copy(OVERVIEW.look);
+  tweening = false;
+  warpMat.opacity = 0;
+  introDone = true;
+  document.getElementById('hint').classList.add('show');
+  document.getElementById('navArrows').classList.add('show');
+  document.getElementById('dots').classList.add('show');
+  document.getElementById('skipIntro').classList.add('hide');
+  updateChrome();
+}
+document.getElementById('skipIntro').addEventListener('click', (e) => { e.stopPropagation(); skipIntro(); });
+
+// ---------- dot rail ----------
+const dotsRoot = document.getElementById('dots');
+const dotEls = CATEGORIES.map((cat, i) => {
+  const b = document.createElement('button');
+  b.setAttribute('aria-label', cat.title);
+  b.addEventListener('click', (e) => { e.stopPropagation(); if (!tweening) goTo(i); });
+  dotsRoot.appendChild(b);
+  return b;
+});
+const prevBtn = document.getElementById('prevBtn');
+const nextBtn = document.getElementById('nextBtn');
+prevBtn.addEventListener('click', (e) => { e.stopPropagation(); if (!tweening) goTo(currentIndex - 1); });
+nextBtn.addEventListener('click', (e) => { e.stopPropagation(); if (!tweening) goTo(currentIndex + 1); });
+
+function updateChrome(){
+  document.getElementById('back').classList.toggle('show', currentIndex >= 0);
+  const hintEl = document.getElementById('hint');
+  if (hintEl) hintEl.textContent = currentIndex >= 0
+    ? `${currentIndex + 1} / ${CATEGORIES.length}`
+    : 'scroll, click a screen, or use the arrows';
+  dotEls.forEach((d, i) => d.classList.toggle('active', i === currentIndex));
+  prevBtn.disabled = currentIndex <= -1;
+  nextBtn.disabled = currentIndex >= CATEGORIES.length - 1;
+}
+
+function goTo(index){
+  currentIndex = Math.max(-1, Math.min(CATEGORIES.length - 1, index));
+  const target = currentIndex < 0 ? OVERVIEW : dockWaypointFor(CATEGORIES[currentIndex]);
+  startTween(target.pos, target.look, 1600);
+  updateChrome();
+}
+
+document.getElementById('back').addEventListener('click', (e) => { e.stopPropagation(); goTo(-1); });
+
+// ---------- lightbox — real Io reel ----------
+const lightbox = document.getElementById('lightbox');
+const lightboxVideo = document.getElementById('lightboxVideo');
+function openLightbox(){
+  lightboxVideo.src = './videos/io-reel.mp4';
+  lightbox.classList.add('show');
+  document.getElementById('lightboxClose').classList.add('show');
+  lightboxVideo.play().catch(() => {});
+}
+function closeLightbox(){
+  lightbox.classList.remove('show');
+  document.getElementById('lightboxClose').classList.remove('show');
+  lightboxVideo.pause();
+}
+document.getElementById('lightboxClose').addEventListener('click', (e) => { e.stopPropagation(); closeLightbox(); });
+lightbox.addEventListener('click', (e) => { e.stopPropagation(); if (e.target === lightbox) closeLightbox(); });
+screenObjs.forEach(s => { if (s.playEl) s.playEl.addEventListener('click', (e) => { e.stopPropagation(); openLightbox(); }); });
+
+// ---------- scroll ----------
+let wheelCooldown = false;
+addEventListener('wheel', (e) => {
+  e.preventDefault();
+  if (!introDone || wheelCooldown || tweening) return;
+  wheelCooldown = true;
+  setTimeout(() => { wheelCooldown = false; }, tweenDuration + 150);
+  goTo(currentIndex + (e.deltaY > 0 ? 1 : -1));
+}, { passive: false });
+
+// ---------- pointer interaction ----------
+const raycaster = new THREE.Raycaster();
+const pointerNDC = new THREE.Vector2();
+let mouseX = 0, mouseY = 0;
+
+addEventListener('pointermove', (e) => {
+  mouseX = (e.clientX / innerWidth - 0.5) * 2;
+  mouseY = (e.clientY / innerHeight - 0.5) * 2;
+  pointerNDC.set(mouseX, -mouseY);
+  if (!introDone) return;
+  const hits = raycaster.intersectObjects(screenObjs.map(s => s.screen));
+  document.body.style.cursor = hits.length ? 'pointer' : 'default';
+});
+addEventListener('click', () => {
+  if (!introDone) return;
+  raycaster.setFromCamera(pointerNDC, camera);
+  const hits = raycaster.intersectObjects(screenObjs.map(s => s.screen));
+  if (hits.length && !tweening) {
+    goTo(hits[0].object.userData.categoryIndex);
+  }
+});
+addEventListener('resize', () => {
+  camera.aspect = innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+  composer.setSize(innerWidth, innerHeight);
+});
+
+// ---------- intermittent-plume duty cycle (Europa's two plume sites, and Io's
+// episodic volcanoes below) — a smooth burst that occupies `burst` seconds out of
+// every `cycle` seconds, offset by `phase` so multiple sites don't fire in sync ----------
+function plumeEnvelope(t, cycle, burst, phase){
+  const local = (t + phase) % cycle;
+  if (local > burst) return 0.0;
+  return Math.sin(Math.PI * (local / burst));
+}
+const EUROPA_CYCLE = [22.0, 27.0];
+const EUROPA_BURST = [4.5, 3.5];
+const EUROPA_PHASE = [0.0, 12.0];
+
+// ---------- animate ----------
+const TARGET_FPS = 30;
+const FRAME_INTERVAL = 1000 / TARGET_FPS;
+let lastFrameTime = 0;
+const clock = new THREE.Clock();
+const tmpV3 = new THREE.Vector3();
+let jupiterRotY = 0;
+
+function animate(now){
+  requestAnimationFrame(animate);
+  if (now - lastFrameTime < FRAME_INTERVAL) return;
+  lastFrameTime = now;
+
+  const dt = clock.getDelta();
+  const t = clock.getElapsedTime();
+
+  if (ioUniforms) {
+    ioUniforms.uTime.value = t; ioPlumeMat.uniforms.uTime.value = t;
+    for (let i = 0; i < 6; i++) {
+      const v = ioVolcanoes[i];
+      const env = v.type === 'lake' ? (0.55 + 0.45*(0.5+0.5*Math.sin(t*0.15)))
+        : v.type === 'intermittent' ? plumeEnvelope(t, v.cycle, v.burst, v.phase)
+        : 1.0; // persistent
+      ioUniforms.uSiteEnv.value[i] = env;
+      ioPlumeMat.uniforms.uSiteEnv.value[i] = env;
+    }
+  }
+  if (euUniforms) {
+    euUniforms.uTime.value = t;
+    const e0 = plumeEnvelope(t, EUROPA_CYCLE[0], EUROPA_BURST[0], EUROPA_PHASE[0]);
+    const e1 = plumeEnvelope(t, EUROPA_CYCLE[1], EUROPA_BURST[1], EUROPA_PHASE[1]);
+    euUniforms.uPlumeEnv.value[0] = e0; euUniforms.uPlumeEnv.value[1] = e1;
+    euPlumeMat.uniforms.uPlumeEnv.value[0] = e0; euPlumeMat.uniforms.uPlumeEnv.value[1] = e1;
+  }
+
+  if (currentIndex < 0 && !tweening && introDone) jupiterRotY += dt * 0.06;
+  jupiter.rotation.y = jupiterRotY;
+
+  // fade the warp streaks in/out only during the transit leg (index 1)
+  const wantWarp = introLegIndex === 1 ? 1 : 0;
+  warpMat.opacity += (wantWarp*0.7 - warpMat.opacity) * Math.min(1, dt*3);
+
+  if (tweening) {
+    const raw = Math.min(1, (performance.now() - tweenStart) / tweenDuration);
+    const e = easeInOutCubic(raw);
+    camera.position.lerpVectors(camFrom.pos, camTo.pos, e);
+    currentLook.lerpVectors(camFrom.look, camTo.look, e);
+    if (raw >= 1) {
+      tweening = false;
+      if (!introDone) advanceIntro();
+    }
+  } else if (!introDone && introLegIndex < 0) {
+    // still sitting at the Earth close-up before the first leg kicks off
+  } else if (currentIndex < 0 && introDone) {
+    camera.position.x = OVERVIEW.pos.x + Math.sin(t*0.06)*1.2 + mouseX*0.6;
+    camera.position.y = OVERVIEW.pos.y + Math.cos(t*0.05)*0.6 - mouseY*0.4;
+    camera.position.z = OVERVIEW.pos.z;
+    currentLook.copy(OVERVIEW.look);
+  }
+  camera.lookAt(currentLook);
+  raycaster.setFromCamera(pointerNDC, camera);
+
+  screenObjs.forEach(s => {
+    const wp = tmpV3.setFromMatrixPosition(s.group.matrixWorld);
+    const ndc = wp.clone().project(camera);
+    const dist = camera.position.distanceTo(wp);
+    const visible = introDone && ndc.z < 1 && dist < 14;
+    const leftPx = (ndc.x*0.5+0.5) * innerWidth;
+    const topPx = (1-(ndc.y*0.5+0.5)) * innerHeight;
+    const scaleRem = Math.max(1.4, 5.2 - dist*0.24);
+
+    if (s.titleEl) {
+      if (visible) {
+        s.titleEl.style.left = leftPx + 'px'; s.titleEl.style.top = topPx + 'px';
+        s.titleEl.style.fontSize = scaleRem + 'rem'; s.titleEl.style.opacity = 1;
+      } else { s.titleEl.style.opacity = 0; }
+    }
+    if (s.kickerEl) {
+      const kickerVisible = visible && dist < 8;
+      if (kickerVisible) {
+        s.kickerEl.style.left = leftPx + 'px'; s.kickerEl.style.top = (topPx - scaleRem*20) + 'px';
+        s.kickerEl.style.fontSize = Math.min(scaleRem*0.42, 1.05) + 'rem'; s.kickerEl.style.opacity = 1;
+      } else { s.kickerEl.style.opacity = 0; }
+    }
+    if (s.playEl) {
+      const playVisible = visible && dist < 8;
+      if (playVisible) {
+        s.playEl.style.left = leftPx + 'px'; s.playEl.style.top = (topPx + scaleRem*22) + 'px';
+        s.playEl.style.opacity = 1;
+      } else { s.playEl.style.opacity = 0; }
+    }
+    if (s.panelEl) {
+      const panelVisible = visible && dist < 8;
+      if (panelVisible) {
+        s.panelEl.style.left = leftPx + 'px'; s.panelEl.style.top = (topPx + 90) + 'px';
+        s.panelEl.style.fontSize = Math.min(scaleRem, 2.2) + 'rem'; s.panelEl.style.opacity = 1;
+      } else { s.panelEl.style.opacity = 0; }
+    }
+  });
+
+  composer.render();
+}
+advanceIntro(); // kicks off leg 0 (pull back from Earth)
+requestAnimationFrame(animate);
+</script>
+</body>
+</html>

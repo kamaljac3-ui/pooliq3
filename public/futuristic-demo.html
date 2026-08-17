@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Futuristic Demo</title>
+<style>
+  html,body{margin:0;padding:0;overflow:hidden;background:#04050a;height:100%;}
+  canvas{display:block;}
+  #hud{
+    position:fixed; top:0; left:0; right:0; padding:28px 40px; pointer-events:none;
+    font-family:'Consolas','SFMono-Regular',monospace; color:#8fe9d8; z-index:10;
+    display:flex; justify-content:space-between; align-items:flex-start;
+    text-shadow:0 0 12px rgba(99,242,201,0.55);
+  }
+  #hud h1{font-size:1.1rem; letter-spacing:0.12em; margin:0; font-weight:600; text-transform:uppercase;}
+  #hud .tag{font-size:0.7rem; opacity:0.6; margin-top:6px;}
+  #hud .coords{font-size:0.72rem; text-align:right; opacity:0.8; line-height:1.6;}
+  #vignette{
+    position:fixed; inset:0; pointer-events:none; z-index:9;
+    background:radial-gradient(ellipse at center, rgba(0,0,0,0) 45%, rgba(0,0,0,0.65) 100%);
+  }
+  #scan{
+    position:fixed; inset:0; pointer-events:none; z-index:8; opacity:0.05;
+    background:repeating-linear-gradient(0deg, #000 0px, #000 1px, transparent 1px, transparent 3px);
+  }
+</style>
+</head>
+<body>
+<div id="hud">
+  <div>
+    <h1>Structure // 001</h1>
+    <div class="tag">procedural geometry — live render</div>
+  </div>
+  <div class="coords" id="coords">lat 41.29&deg; / lon -70.09&deg;<br>alt 0.00m</div>
+</div>
+<div id="scan"></div>
+<div id="vignette"></div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+
+// ---------- basic setup ----------
+const scene = new THREE.Scene();
+scene.fog = new THREE.FogExp2(0x04050a, 0.028);
+
+const camera = new THREE.PerspectiveCamera(55, innerWidth/innerHeight, 0.1, 200);
+camera.position.set(0, 3.2, 11);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(innerWidth, innerHeight);
+renderer.setPixelRatio(1);
+document.body.appendChild(renderer.domElement);
+
+// ---------- bloom composer ----------
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 1.15, 0.6, 0.15);
+composer.addPass(bloom);
+
+// ---------- grid floor ----------
+const grid = new THREE.GridHelper(60, 60, 0x2ee6c8, 0x123a35);
+grid.position.y = -2.4;
+grid.material.transparent = true;
+grid.material.opacity = 0.5;
+scene.add(grid);
+
+// second faint grid further down for depth
+const grid2 = new THREE.GridHelper(120, 30, 0x1a3d3a, 0x0c1c1a);
+grid2.position.y = -2.41;
+grid2.material.transparent = true;
+grid2.material.opacity = 0.3;
+scene.add(grid2);
+
+// ---------- central structure: displaced icosahedron ----------
+const geo = new THREE.IcosahedronGeometry(2.2, 6);
+const pos = geo.attributes.position;
+const basePositions = pos.array.slice();
+
+const wireMat = new THREE.MeshBasicMaterial({ color: 0x63f2c9, wireframe: true, transparent: true, opacity: 0.85 });
+const coreMat = new THREE.MeshStandardMaterial({
+  color: 0x0b3d36, emissive: 0x1fae8f, emissiveIntensity: 0.6,
+  metalness: 0.3, roughness: 0.35, transparent: true, opacity: 0.35
+});
+
+const wireMesh = new THREE.Mesh(geo, wireMat);
+const coreGeo = new THREE.IcosahedronGeometry(2.05, 3);
+const coreMesh = new THREE.Mesh(coreGeo, coreMat);
+
+const structure = new THREE.Group();
+structure.add(coreMesh, wireMesh);
+scene.add(structure);
+
+// inner rotating rings
+const ringGroup = new THREE.Group();
+for (let i = 0; i < 3; i++) {
+  const ringGeo = new THREE.TorusGeometry(3.1 + i * 0.5, 0.015, 8, 128);
+  const ringMat = new THREE.MeshBasicMaterial({ color: 0x63f2c9, transparent: true, opacity: 0.35 - i*0.08 });
+  const ring = new THREE.Mesh(ringGeo, ringMat);
+  ring.rotation.x = Math.PI/2 + i*0.35;
+  ring.rotation.y = i * 0.6;
+  ring.userData.speed = 0.06 + i*0.03;
+  ringGroup.add(ring);
+}
+scene.add(ringGroup);
+
+// ---------- particle field ----------
+const particleCount = 900;
+const particleGeo = new THREE.BufferGeometry();
+const particlePos = new Float32Array(particleCount * 3);
+for (let i = 0; i < particleCount; i++) {
+  const r = 8 + Math.random() * 22;
+  const theta = Math.random() * Math.PI * 2;
+  const y = (Math.random() - 0.5) * 14;
+  particlePos[i*3] = Math.cos(theta) * r;
+  particlePos[i*3+1] = y;
+  particlePos[i*3+2] = Math.sin(theta) * r;
+}
+particleGeo.setAttribute('position', new THREE.BufferAttribute(particlePos, 3));
+const particleMat = new THREE.PointsMaterial({ color: 0x63f2c9, size: 0.035, transparent: true, opacity: 0.55 });
+const particles = new THREE.Points(particleGeo, particleMat);
+scene.add(particles);
+
+// ---------- lights ----------
+scene.add(new THREE.AmbientLight(0x0d2b28, 1.2));
+const key = new THREE.PointLight(0x63f2c9, 6, 30);
+key.position.set(4, 5, 6);
+scene.add(key);
+const rim = new THREE.PointLight(0x2a6ef2, 3, 30);
+rim.position.set(-6, -2, -4);
+scene.add(rim);
+
+// ---------- mouse parallax ----------
+let mouseX = 0, mouseY = 0;
+addEventListener('pointermove', (e) => {
+  mouseX = (e.clientX / innerWidth - 0.5) * 2;
+  mouseY = (e.clientY / innerHeight - 0.5) * 2;
+});
+
+// ---------- resize ----------
+addEventListener('resize', () => {
+  camera.aspect = innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+  composer.setSize(innerWidth, innerHeight);
+});
+
+// ---------- animation loop ----------
+const clock = new THREE.Clock();
+function animate() {
+  const t = clock.getElapsedTime();
+
+  // vertex displacement (organic breathing surface)
+  const arr = pos.array;
+  for (let i = 0; i < arr.length; i += 3) {
+    const bx = basePositions[i], by = basePositions[i+1], bz = basePositions[i+2];
+    const n = Math.sin(bx*1.5 + t*0.8) * Math.cos(by*1.5 + t*0.6) * Math.sin(bz*1.5 + t*0.7);
+    const scale = 1 + n * 0.06;
+    arr[i] = bx * scale; arr[i+1] = by * scale; arr[i+2] = bz * scale;
+  }
+  pos.needsUpdate = true;
+
+  structure.rotation.y = t * 0.15;
+  structure.rotation.x = Math.sin(t*0.3) * 0.1;
+  structure.position.y = Math.sin(t*0.5) * 0.15;
+
+  ringGroup.children.forEach(r => { r.rotation.z += r.userData.speed * 0.01; });
+  particles.rotation.y = t * 0.02;
+
+  camera.position.x += (mouseX*1.5 - camera.position.x) * 0.02;
+  camera.position.y += (3.2 - mouseY*0.8 - camera.position.y) * 0.02;
+  camera.lookAt(0,0,0);
+
+  const coordsEl = document.getElementById('coords');
+  if (coordsEl) coordsEl.innerHTML = `lat 41.29&deg; / lon -70.09&deg;<br>alt ${(t*3.4%180).toFixed(2)}m`;
+
+  composer.render();
+  requestAnimationFrame(animate);
+}
+animate();
+</script>
+</body>
+</html>

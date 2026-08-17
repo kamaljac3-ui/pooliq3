@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Portfolio Prototype — Saturn</title>
+<style>
+  html,body{margin:0;padding:0;overflow:hidden;background:#03040a;height:100%;}
+  canvas{display:block;}
+  #hud{
+    position:fixed; top:0; left:0; right:0; padding:28px 40px; pointer-events:none;
+    font-family:'Consolas','SFMono-Regular',monospace; color:#cfe0ff; z-index:10;
+    display:flex; justify-content:space-between; align-items:flex-start;
+    text-shadow:0 0 12px rgba(140,170,255,0.5);
+  }
+  #hud h1{font-size:1.0rem; letter-spacing:0.14em; margin:0; font-weight:600; text-transform:uppercase;}
+  #hud .tag{font-size:0.66rem; opacity:0.55; margin-top:6px; max-width:340px; line-height:1.5;}
+  #back{
+    position:fixed; top:28px; left:40px; z-index:12; pointer-events:auto;
+    font-family:'Consolas','SFMono-Regular',monospace; font-size:0.75rem; letter-spacing:0.08em;
+    color:#cfe0ff; background:rgba(20,26,46,0.55); border:1px solid rgba(140,170,255,0.4);
+    padding:9px 16px; border-radius:3px; cursor:pointer; text-transform:uppercase;
+    opacity:0; transform:translateY(-6px); transition:opacity 0.35s, transform 0.35s;
+  }
+  #back.show{ opacity:1; transform:translateY(0); pointer-events:auto; }
+  #back:hover{ background:rgba(140,170,255,0.18); }
+  #vignette{
+    position:fixed; inset:0; pointer-events:none; z-index:9;
+    background:radial-gradient(ellipse at center, rgba(0,0,0,0) 40%, rgba(0,0,0,0.72) 100%);
+  }
+  #hint{
+    position:fixed; bottom:26px; left:0; right:0; text-align:center; z-index:10; pointer-events:none;
+    font-family:'Consolas','SFMono-Regular',monospace; font-size:0.68rem; letter-spacing:0.1em;
+    color:#8fa4d8; text-transform:uppercase;
+    opacity:0; transition:opacity 0.4s;
+  }
+  #hint.show{ opacity:0.65; }
+  .crosshair{ cursor:pointer; }
+
+  /* persistent next/prev — the real fix: always-available, discoverable controls so
+     moving between screens never requires detouring back through orbit */
+  #navArrows{
+    position:fixed; top:50%; left:0; right:0; transform:translateY(-50%);
+    display:flex; justify-content:space-between; padding:0 28px; z-index:12;
+    pointer-events:none; opacity:0; transition:opacity 0.4s;
+  }
+  #navArrows.show{ opacity:1; pointer-events:auto; }
+  #navArrows button{
+    width:52px; height:52px; border-radius:50%;
+    background:rgba(20,26,46,0.5); border:1px solid rgba(140,170,255,0.4);
+    color:#cfe0ff; font-size:1.4rem; font-family:'Consolas','SFMono-Regular',monospace;
+    cursor:pointer; transition:background 0.25s, opacity 0.25s;
+  }
+  #navArrows button:hover{ background:rgba(140,170,255,0.22); }
+  #navArrows button:disabled{ opacity:0.25; cursor:default; pointer-events:none; }
+
+  #dots{
+    position:fixed; right:32px; top:50%; transform:translateY(-50%); z-index:12;
+    display:flex; flex-direction:column; gap:14px; align-items:center;
+    opacity:0; pointer-events:none; transition:opacity 0.4s;
+  }
+  #dots.show{ opacity:1; pointer-events:auto; }
+  #dots button{
+    width:10px; height:10px; padding:0; border-radius:50%; cursor:pointer;
+    background:rgba(140,170,255,0.25); border:1px solid rgba(140,170,255,0.5);
+    transition:background 0.25s, transform 0.25s;
+  }
+  #dots button:hover{ transform:scale(1.25); }
+  #dots button.active{ background:#cfe0ff; box-shadow:0 0 10px 2px rgba(140,170,255,0.8); }
+
+  /* project name overlaid on the video screen — mix-blend-mode composites it against
+     whatever's playing underneath per-pixel, so it stays legible and color-harmonized
+     with the footage automatically, frame to frame, without hand-picking a text color */
+  .videoTitle{
+    position:fixed; z-index:11; pointer-events:none; transform:translate(-50%,-50%);
+    font-family:'Consolas','SFMono-Regular',monospace; font-weight:700;
+    letter-spacing:0.06em; color:#ffffff; mix-blend-mode:difference;
+    white-space:nowrap;
+  }
+  .playHint{
+    position:fixed; z-index:11; pointer-events:auto; cursor:pointer; transform:translate(-50%,-50%);
+    font-family:'Consolas','SFMono-Regular',monospace; font-size:0.85rem; letter-spacing:0.08em;
+    color:#ffffff; mix-blend-mode:difference; white-space:nowrap;
+    padding:8px 16px; border:1px solid rgba(255,255,255,0.6); border-radius:20px;
+  }
+
+  /* info card projected onto each non-video moon once docked in close — real DOM text,
+     not baked into a texture, so it's selectable/accessible/SEO-visible for free */
+  .moonPanel{
+    position:fixed; z-index:11; pointer-events:none; transform:translate(-50%,-50%);
+    text-align:center; opacity:0; transition:opacity 0.25s;
+  }
+  .moonPanelTitle{
+    font-family:'Consolas','SFMono-Regular',monospace; font-weight:700; letter-spacing:0.06em;
+    font-size:0.9em; color:#cfe0ff; text-shadow:0 0 14px rgba(140,170,255,0.7); white-space:nowrap;
+  }
+  .moonPanelSub{
+    font-family:'Consolas','SFMono-Regular',monospace; font-size:0.32em; color:rgba(190,205,255,0.7);
+    margin-top:0.4em; white-space:nowrap;
+  }
+  .moonPanelMoon{
+    font-family:'Consolas','SFMono-Regular',monospace; font-size:0.24em; letter-spacing:0.12em;
+    color:rgba(140,170,255,0.55); margin-top:0.6em; text-transform:uppercase; white-space:nowrap;
+  }
+
+  #lightbox{
+    position:fixed; inset:0; z-index:50; background:rgba(2,4,10,0.92);
+    display:flex; align-items:center; justify-content:center;
+    opacity:0; pointer-events:none; transition:opacity 0.3s;
+  }
+  #lightbox.show{ opacity:1; pointer-events:auto; }
+  #lightbox video{ max-width:88vw; max-height:80vh; border:1px solid rgba(140,170,255,0.4); box-shadow:0 0 60px rgba(80,120,255,0.35); }
+  #lightboxClose{
+    position:fixed; top:28px; right:40px; z-index:51; cursor:pointer;
+    font-family:'Consolas','SFMono-Regular',monospace; font-size:0.9rem; color:#cfe0ff;
+    background:rgba(20,26,46,0.6); border:1px solid rgba(140,170,255,0.4);
+    padding:9px 16px; border-radius:3px;
+    opacity:0; pointer-events:none; transition:opacity 0.3s;
+  }
+  #lightboxClose.show{ opacity:1; pointer-events:auto; }
+</style>
+</head>
+<body>
+<div id="hud">
+  <div>
+    <h1>Prototype // Orbital Portfolio</h1>
+    <div class="tag">Proof of concept — Saturn hub with floating category screens, scroll-ordered camera navigation. Placeholder content.</div>
+  </div>
+</div>
+<div id="back">&larr; Back to orbit</div>
+<div id="hint">scroll or click a screen to explore</div>
+<div id="navArrows">
+  <button id="prevBtn" aria-label="Previous category">&lsaquo;</button>
+  <button id="nextBtn" aria-label="Next category">&rsaquo;</button>
+</div>
+<div id="dots"></div>
+<div id="vignette"></div>
+<div id="lightbox">
+  <video id="lightboxVideo" controls playsinline></video>
+</div>
+<div id="lightboxClose">&times; Close</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+
+// ---------- setup ----------
+const scene = new THREE.Scene();
+scene.fog = new THREE.FogExp2(0x03040a, 0.006);
+
+// near:far ratio matters for depth-buffer precision — 800 was massive overkill (starfield
+// only reaches ~300) and was causing z-fighting between the screen planes and their frame
+// boxes at close dock range, since floating-point depth precision degrades badly with a
+// large far/near ratio
+const camera = new THREE.PerspectiveCamera(45, innerWidth/innerHeight, 0.1, 350);
+const OVERVIEW = { pos: new THREE.Vector3(2, 6, 22), look: new THREE.Vector3(0, 0, 0) };
+// intro starts far out along the same sightline and dollies in — establishes scale before
+// asking anything of the user, rather than cutting straight to the interactive framing
+const INTRO_START = { pos: OVERVIEW.pos.clone().normalize().multiplyScalar(130), look: OVERVIEW.look.clone() };
+camera.position.copy(INTRO_START.pos);
+camera.lookAt(INTRO_START.look);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(innerWidth, innerHeight);
+renderer.setPixelRatio(1);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.0;
+document.body.appendChild(renderer.domElement);
+
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.55, 0.35, 0.85);
+composer.addPass(bloom);
+composer.addPass(new OutputPass());
+
+const LIGHT_DIR = new THREE.Vector3(1, 0.5, 0.4).normalize();
+const sun = new THREE.DirectionalLight(0xffffff, 3.2); // sun-at-infinity — no distance falloff, unlike PointLight
+sun.position.copy(LIGHT_DIR);
+scene.add(sun);
+scene.add(new THREE.AmbientLight(0x223355, 0.8));
+
+// ---------- Saturn ----------
+const texLoader = new THREE.TextureLoader();
+const saturnMap = texLoader.load('./textures/saturn_map.jpg');
+saturnMap.colorSpace = THREE.SRGBColorSpace;
+saturnMap.wrapS = THREE.RepeatWrapping;
+
+const saturn = new THREE.Mesh(
+  new THREE.SphereGeometry(4.2, 96, 96),
+  new THREE.MeshStandardMaterial({ map: saturnMap, roughness: 0.9, metalness: 0.0 })
+);
+saturn.rotation.z = THREE.MathUtils.degToRad(26.7); // Saturn's real axial tilt
+scene.add(saturn);
+
+// ---------- rings ----------
+const ringInner = 5.6, ringOuter = 10.2;
+const ringGeo = new THREE.RingGeometry(ringInner, ringOuter, 256, 1);
+// RingGeometry's UV.x runs 0..1 across the whole quad, not radius — remap per-vertex
+{
+  const pos = ringGeo.attributes.position;
+  const uv = ringGeo.attributes.uv;
+  const v3 = new THREE.Vector3();
+  for (let i = 0; i < pos.count; i++) {
+    v3.fromBufferAttribute(pos, i);
+    const r = v3.length();
+    const t = (r - ringInner) / (ringOuter - ringInner);
+    uv.setXY(i, t, 0.5);
+  }
+}
+// real ring cross-section (Solar System Scope, NASA-derived, CC BY 4.0) — a 1D radial
+// strip with true alpha for the Cassini division and outer fade, sampled along uv.x=radius
+const ringTex = texLoader.load('./textures/saturn_ring.png');
+ringTex.colorSpace = THREE.SRGBColorSpace;
+const ringMat = new THREE.ShaderMaterial({
+  transparent: true,
+  side: THREE.DoubleSide,
+  depthWrite: false,
+  uniforms: { uLightDir: { value: LIGHT_DIR }, uRingTex: { value: ringTex } },
+  vertexShader: `
+    varying vec2 vUv;
+    void main(){
+      vUv = uv;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0);
+    }
+  `,
+  fragmentShader: `
+    uniform sampler2D uRingTex;
+    varying vec2 vUv;
+    void main(){
+      vec4 tex = texture2D(uRingTex, vec2(vUv.x, 0.5));
+      gl_FragColor = vec4(tex.rgb, tex.a);
+    }
+  `,
+});
+const ring = new THREE.Mesh(ringGeo, ringMat);
+ring.rotation.x = Math.PI/2;
+ring.rotation.z = THREE.MathUtils.degToRad(26.7);
+scene.add(ring);
+
+// ---------- starfield ----------
+const starCount = 1400;
+const starGeo = new THREE.BufferGeometry();
+const starPos = new Float32Array(starCount*3);
+for (let i=0;i<starCount;i++){
+  const r = 80 + Math.random()*220;
+  const theta = Math.random()*Math.PI*2;
+  const phi = Math.acos((Math.random()*2)-1);
+  starPos[i*3] = r*Math.sin(phi)*Math.cos(theta);
+  starPos[i*3+1] = r*Math.cos(phi);
+  starPos[i*3+2] = r*Math.sin(phi)*Math.sin(theta);
+}
+starGeo.setAttribute('position', new THREE.BufferAttribute(starPos,3));
+scene.add(new THREE.Points(starGeo, new THREE.PointsMaterial({ color:0xffffff, size:0.05, transparent:true, opacity:0.7 })));
+
+// ---------- category moons ----------
+// Each category is one of Saturn's six largest real moons — real NASA/Cassini global color
+// mosaics (Wikimedia Commons, public domain), same simple-cylindrical projection as Saturn's
+// own texture, on the same sphere+TextureLoader combination already proven reliable. Docking
+// in swaps the moon's role from "orbiting body" to "content surface": its title/description
+// appears as a DOM overlay projected onto it — the same technique already proven reliable —
+// rather than baking text into a WebGL texture, which is what a flat PlaneGeometry screen
+// consistently failed to do in this environment for reasons that never fully reproduced in
+// isolation. Titan's real Cassini mosaic is a grayscale near-infrared surface map (its true
+// color is a featureless orange haze) — tinted via material.color multiply for the iconic
+// hazy look while keeping the real surface detail underneath.
+// All six sit at the same depth along the camera's view axis (computed from the overview
+// camera's actual forward/right/up basis, not eyeballed) — same distance from camera means
+// same apparent size. Order top-to-bottom = scroll order, highest to lowest, largest to
+// smallest of the six: Titan, Rhea, Iapetus, Dione, Tethys, Enceladus.
+const CATEGORIES = [
+  { title: 'GALLERY',             sub: 'Recent builds, in motion',        pos: new THREE.Vector3(-2.54, 8.08, 5.20), video: true, videoLabel: 'REEL', moon: 'Titan', tex: './textures/titan_map.jpg', tint: 0xd9a066 },
+  { title: 'NEW BUILDS',          sub: 'Custom sites, from scratch',      pos: new THREE.Vector3(3.50, 5.57, 5.33), moon: 'Rhea', tex: './textures/rhea_map.jpg' },
+  { title: 'REDESIGNS & REBUILDS',sub: 'New life for an existing site',   pos: new THREE.Vector3(-2.42, 3.06, 6.56), moon: 'Iapetus', tex: './textures/iapetus_map.jpg' },
+  { title: 'SUPPORT & HOSTING',   sub: 'Ongoing care after launch',       pos: new THREE.Vector3(3.62, 0.55, 6.69), moon: 'Dione', tex: './textures/dione_map.jpg' },
+  { title: 'ABOUT',               sub: 'Who’s behind this',          pos: new THREE.Vector3(-2.29, -1.96, 7.91), moon: 'Tethys', tex: './textures/tethys_map.jpg' },
+  { title: 'CONTACT',             sub: 'Start a project',                 pos: new THREE.Vector3(3.74, -4.47, 8.05), moon: 'Enceladus', tex: './textures/enceladus_map.jpg' },
+];
+
+const screenObjs = [];
+CATEGORIES.forEach((cat, i) => {
+  const group = new THREE.Group();
+  group.position.copy(cat.pos);
+  group.lookAt(0, 0, 0);
+
+  const moonTex = texLoader.load(cat.tex);
+  moonTex.colorSpace = THREE.SRGBColorSpace;
+  const moonMat = new THREE.MeshStandardMaterial({
+    map: moonTex,
+    color: cat.tint || 0xffffff,
+    roughness: 0.85,
+  });
+  const moon = new THREE.Mesh(new THREE.SphereGeometry(1.15, 48, 48), moonMat);
+  moon.userData.categoryIndex = i;
+  group.add(moon);
+
+  scene.add(group);
+  screenObjs.push({ group, screen: moon, cat });
+
+  if (cat.video) {
+    const titleEl = document.createElement('div');
+    titleEl.className = 'videoTitle';
+    titleEl.textContent = cat.videoLabel || cat.title;
+    titleEl.style.fontSize = '2.6rem';
+    document.body.appendChild(titleEl);
+    screenObjs[screenObjs.length - 1].titleEl = titleEl;
+
+    const playEl = document.createElement('div');
+    playEl.className = 'playHint';
+    playEl.textContent = '▶ play reel';
+    document.body.appendChild(playEl);
+    screenObjs[screenObjs.length - 1].playEl = playEl;
+  } else {
+    const panelEl = document.createElement('div');
+    panelEl.className = 'moonPanel';
+    panelEl.innerHTML = `<div class="moonPanelTitle">${cat.title}</div><div class="moonPanelSub">${cat.sub}</div><div class="moonPanelMoon">${cat.moon}</div>`;
+    document.body.appendChild(panelEl);
+    screenObjs[screenObjs.length - 1].panelEl = panelEl;
+  }
+});
+
+// ---------- camera waypoints & docking ----------
+const DOCK_OFFSET = 3.2; // moon sphere (radius 1.15) is smaller than the old screen plane — dock in closer
+function dockWaypointFor(cat){
+  const dir = cat.pos.clone().normalize();
+  const pos = cat.pos.clone().add(dir.multiplyScalar(DOCK_OFFSET));
+  return { pos, look: cat.pos.clone() };
+}
+
+let camFrom = { pos: camera.position.clone(), look: INTRO_START.look.clone() };
+let camTo = { pos: camera.position.clone(), look: INTRO_START.look.clone() };
+let tweenStart = 0, tweenDuration = 1600, tweening = false;
+let currentLook = INTRO_START.look.clone();
+// -1 = overview (Saturn free-rotating). 0..N-1 = docked at CATEGORIES[currentIndex],
+// in top-to-bottom / highest-to-lowest scroll order.
+let currentIndex = -1;
+let introDone = false;
+
+function easeInOutCubic(x){ return x < 0.5 ? 4*x*x*x : 1 - Math.pow(-2*x+2,3)/2; }
+
+function startTween(toPos, toLook, duration){
+  camFrom = { pos: camera.position.clone(), look: currentLook.clone() };
+  camTo = { pos: toPos.clone(), look: toLook.clone() };
+  tweenStart = performance.now();
+  tweenDuration = duration;
+  tweening = true;
+}
+
+// ---------- dot rail — jump directly to any screen, no detour through orbit required ----------
+const dotsRoot = document.getElementById('dots');
+const dotEls = CATEGORIES.map((cat, i) => {
+  const b = document.createElement('button');
+  b.setAttribute('aria-label', cat.title);
+  b.addEventListener('click', (e) => { e.stopPropagation(); if (!tweening) goTo(i); });
+  dotsRoot.appendChild(b);
+  return b;
+});
+const prevBtn = document.getElementById('prevBtn');
+const nextBtn = document.getElementById('nextBtn');
+prevBtn.addEventListener('click', (e) => { e.stopPropagation(); if (!tweening) goTo(currentIndex - 1); });
+nextBtn.addEventListener('click', (e) => { e.stopPropagation(); if (!tweening) goTo(currentIndex + 1); });
+
+function updateChrome(){
+  document.getElementById('back').classList.toggle('show', currentIndex >= 0);
+  const hintEl = document.getElementById('hint');
+  if (hintEl) hintEl.textContent = currentIndex >= 0
+    ? `${currentIndex + 1} / ${CATEGORIES.length}`
+    : 'scroll, click a screen, or use the arrows';
+  dotEls.forEach((d, i) => d.classList.toggle('active', i === currentIndex));
+  prevBtn.disabled = currentIndex <= -1;
+  nextBtn.disabled = currentIndex >= CATEGORIES.length - 1;
+}
+
+function goTo(index){
+  currentIndex = Math.max(-1, Math.min(CATEGORIES.length - 1, index));
+  const target = currentIndex < 0 ? OVERVIEW : dockWaypointFor(CATEGORIES[currentIndex]);
+  startTween(target.pos, target.look, 1600);
+  updateChrome();
+}
+
+document.getElementById('back').addEventListener('click', (e) => { e.stopPropagation(); goTo(-1); });
+
+// ---------- lightbox — real native <video> playback of the actual Io capture, opened from
+// the Gallery screen's "play reel" hint rather than baked into the WebGL texture live ----------
+const lightbox = document.getElementById('lightbox');
+const lightboxVideo = document.getElementById('lightboxVideo');
+function openLightbox(){
+  lightboxVideo.src = './videos/io-reel.mp4';
+  lightbox.classList.add('show');
+  document.getElementById('lightboxClose').classList.add('show');
+  lightboxVideo.play().catch(() => {});
+}
+function closeLightbox(){
+  lightbox.classList.remove('show');
+  document.getElementById('lightboxClose').classList.remove('show');
+  lightboxVideo.pause();
+}
+document.getElementById('lightboxClose').addEventListener('click', (e) => { e.stopPropagation(); closeLightbox(); });
+lightbox.addEventListener('click', (e) => { e.stopPropagation(); if (e.target === lightbox) closeLightbox(); });
+screenObjs.forEach(s => { if (s.playEl) s.playEl.addEventListener('click', (e) => { e.stopPropagation(); openLightbox(); }); });
+
+// ---------- scroll steps through the screens in order; one step per gesture ----------
+let wheelCooldown = false;
+addEventListener('wheel', (e) => {
+  e.preventDefault();
+  if (wheelCooldown || tweening) return;
+  wheelCooldown = true;
+  setTimeout(() => { wheelCooldown = false; }, tweenDuration + 150);
+  goTo(currentIndex + (e.deltaY > 0 ? 1 : -1));
+}, { passive: false });
+
+// ---------- pointer interaction ----------
+const raycaster = new THREE.Raycaster();
+const pointerNDC = new THREE.Vector2();
+let mouseX = 0, mouseY = 0;
+
+addEventListener('pointermove', (e) => {
+  mouseX = (e.clientX / innerWidth - 0.5) * 2;
+  mouseY = (e.clientY / innerHeight - 0.5) * 2;
+  pointerNDC.set(mouseX, -mouseY);
+  const hits = raycaster.intersectObjects(screenObjs.map(s => s.screen));
+  document.body.style.cursor = hits.length ? 'pointer' : 'default';
+});
+addEventListener('click', () => {
+  raycaster.setFromCamera(pointerNDC, camera);
+  const hits = raycaster.intersectObjects(screenObjs.map(s => s.screen));
+  if (hits.length && !tweening) {
+    goTo(hits[0].object.userData.categoryIndex);
+  }
+});
+addEventListener('resize', () => {
+  camera.aspect = innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+  composer.setSize(innerWidth, innerHeight);
+});
+
+// ---------- animate ----------
+const TARGET_FPS = 30;
+const FRAME_INTERVAL = 1000 / TARGET_FPS;
+let lastFrameTime = 0;
+const clock = new THREE.Clock();
+const tmpV3 = new THREE.Vector3();
+let saturnRotY = 0; // accumulated manually so it freezes cleanly the moment navigation starts
+
+function animate(now){
+  requestAnimationFrame(animate);
+  if (now - lastFrameTime < FRAME_INTERVAL) return;
+  lastFrameTime = now;
+
+  const dt = clock.getDelta();
+  const t = clock.getElapsedTime();
+
+  // Saturn only spins in the overview/idle state — the instant the user starts navigating
+  // (scroll or click), rotation freezes right where it is, so screens aren't read against
+  // a swimming backdrop. Resumes smoothly from the same angle on return, no jump.
+  if (currentIndex < 0 && !tweening) saturnRotY += dt * 0.09;
+  saturn.rotation.y = saturnRotY;
+
+  if (tweening) {
+    const raw = Math.min(1, (performance.now() - tweenStart) / tweenDuration);
+    const e = easeInOutCubic(raw);
+    camera.position.lerpVectors(camFrom.pos, camTo.pos, e);
+    currentLook.lerpVectors(camFrom.look, camTo.look, e);
+    if (raw >= 1) {
+      tweening = false;
+      if (!introDone) {
+        introDone = true;
+        document.getElementById('hint').classList.add('show');
+        document.getElementById('navArrows').classList.add('show');
+        document.getElementById('dots').classList.add('show');
+        updateChrome();
+      }
+    }
+  } else if (currentIndex < 0) {
+    // gentle idle drift around the overview point when not docked
+    camera.position.x = OVERVIEW.pos.x + Math.sin(t*0.06)*1.2 + mouseX*0.6;
+    camera.position.y = OVERVIEW.pos.y + Math.cos(t*0.05)*0.6 - mouseY*0.4;
+    camera.position.z = OVERVIEW.pos.z;
+    currentLook.copy(OVERVIEW.look);
+  }
+  camera.lookAt(currentLook);
+  raycaster.setFromCamera(pointerNDC, camera);
+
+  // keep each moon's DOM content (blended video title, or the info panel) pinned to its
+  // 2D screen-space projection, scaling with apparent distance
+  screenObjs.forEach(s => {
+    const wp = tmpV3.setFromMatrixPosition(s.group.matrixWorld);
+    const ndc = wp.clone().project(camera);
+    const dist = camera.position.distanceTo(wp);
+    const visible = ndc.z < 1 && dist < 14;
+    const leftPx = (ndc.x*0.5+0.5) * innerWidth;
+    const topPx = (1-(ndc.y*0.5+0.5)) * innerHeight;
+    const scaleRem = Math.max(1.4, 5.2 - dist*0.24);
+
+    if (s.titleEl) {
+      if (visible) {
+        s.titleEl.style.left = leftPx + 'px';
+        s.titleEl.style.top = topPx + 'px';
+        s.titleEl.style.fontSize = scaleRem + 'rem';
+        s.titleEl.style.opacity = 1;
+      } else {
+        s.titleEl.style.opacity = 0;
+      }
+    }
+    if (s.playEl) {
+      // only surface the play control once docked in close — keeps the overview clean
+      const playVisible = visible && dist < 8;
+      if (playVisible) {
+        s.playEl.style.left = leftPx + 'px';
+        s.playEl.style.top = (topPx + scaleRem*22) + 'px';
+        s.playEl.style.opacity = 1;
+      } else {
+        s.playEl.style.opacity = 0;
+      }
+    }
+    if (s.panelEl) {
+      // only surface the info panel once docked in close — keeps the overview clean
+      const panelVisible = visible && dist < 8;
+      if (panelVisible) {
+        s.panelEl.style.left = leftPx + 'px';
+        s.panelEl.style.top = (topPx + 90) + 'px';
+        s.panelEl.style.fontSize = Math.min(scaleRem, 2.2) + 'rem';
+        s.panelEl.style.opacity = 1;
+      } else {
+        s.panelEl.style.opacity = 0;
+      }
+    }
+  });
+
+  composer.render();
+}
+startTween(OVERVIEW.pos, OVERVIEW.look, 3800); // opening dolly-in from deep space
+requestAnimationFrame(animate);
+</script>
+</body>
+</html>
