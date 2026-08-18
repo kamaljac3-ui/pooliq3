@@ -2,7 +2,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 
-const ROOT = 'C:\\Users\\kamal\\OneDrive\\Documents\\GitHub\\pooliq\\sports-roundup';
+const ROOT = 'C:\\Users\\kamal\\OneDrive\\Documents\\GitHub\\d3vil-sports';
 const PORT = 8938;
 
 const MIME = {
@@ -32,5 +32,5 @@ http.createServer((req, res) => {
     res.end(data);
   });
 }).listen(PORT, () => {
-  console.log(`sports-roundup static server listening on http://localhost:${PORT}`);
+  console.log(`d3vil-sports static server listening on http://localhost:${PORT}`);
 });
