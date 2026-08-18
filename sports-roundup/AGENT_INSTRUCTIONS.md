@@ -98,8 +98,9 @@ git commit -m "Add <date> roundup"
 git push
 ```
 
-Pushing to `main` triggers the Vercel deployment automatically — no
-separate deploy step needed.
+Pushing to `main` triggers the GitHub Pages deployment automatically (via
+`.github/workflows/deploy-sports-roundup.yml`) — no separate deploy step
+needed.
 
 ## 7. If something fails
 
