@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sonoran Dream</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&display=swap" rel="stylesheet">
+<style>
+  :root{ --ink:#fff4e6; --dim:rgba(255,244,230,0.66); }
+  html{ background:#2a1a24; }
+  html.lenis, html.lenis body{ height:auto; }
+  .lenis.lenis-smooth{ scroll-behavior:auto !important; }
+  .lenis.lenis-stopped{ overflow:hidden; }
+  body{ margin:0; color:var(--ink); font-family:'Helvetica Neue', Arial, sans-serif; -webkit-font-smoothing:antialiased; }
+  canvas#gl{ position:fixed; inset:0; width:100%; height:100%; display:block; z-index:0; }
+  #track{ position:relative; height:1500vh; z-index:1; pointer-events:none; }
+
+  .mono{ font-family:'Consolas','SFMono-Regular',monospace; }
+  #card{
+    position:fixed; left:5vw; bottom:9vh; z-index:5; max-width:360px; opacity:0; pointer-events:none;
+    text-shadow:0 2px 24px rgba(60,20,40,0.55);
+  }
+  #cardNum{ font-size:0.66rem; letter-spacing:0.3em; color:var(--dim); margin-bottom:14px; }
+  #cardName{ font-size:clamp(1.9rem, 3.6vw, 3rem); font-weight:300; line-height:1.05; letter-spacing:-0.01em; }
+  #cardLatin{ font-size:0.9rem; font-style:italic; color:var(--dim); margin:8px 0 16px; }
+  #cardFact{ font-size:0.92rem; line-height:1.7; color:var(--dim); }
+
+  #hint{
+    position:fixed; left:50%; bottom:5vh; transform:translateX(-50%); z-index:5; opacity:0; pointer-events:none;
+    display:flex; flex-direction:column; align-items:center; gap:10px;
+    font-size:0.62rem; letter-spacing:0.3em; text-transform:uppercase; color:var(--dim);
+  }
+  #hint i{ display:block; width:1px; height:40px; background:linear-gradient(var(--dim), transparent); animation:drip 2.2s ease-in-out infinite; transform-origin:top; }
+  @keyframes drip{ 0%{ transform:scaleY(0); } 50%{ transform:scaleY(1); } 100%{ transform:scaleY(1); opacity:0; } }
+  #title{ position:fixed; top:7vh; left:50%; transform:translateX(-50%); z-index:5; text-align:center; pointer-events:none; opacity:0; animation:fadein 2.4s ease 0.8s forwards; }
+  #title b{ display:block; font-weight:300; font-size:clamp(1.4rem, 3vw, 2.2rem); letter-spacing:0.38em; text-transform:uppercase; text-shadow:0 2px 30px rgba(60,20,40,0.5); }
+  #title span{ display:block; margin-top:10px; font-size:0.66rem; letter-spacing:0.3em; color:var(--dim); text-transform:uppercase; }
+  @keyframes fadein{ to{ opacity:1; } }
+
+  #meter{ position:fixed; right:26px; top:50%; transform:translateY(-50%); width:1px; height:120px; background:rgba(255,244,230,0.22); z-index:5; }
+  #meterFill{ position:absolute; inset:0; background:var(--ink); transform-origin:top; transform:scaleY(0); }
+  #statLabel{ position:fixed; right:24px; bottom:18px; z-index:5; font-size:0.6rem; letter-spacing:0.1em; opacity:0.45; }
+
+  #wake{
+    position:fixed; inset:0; z-index:8; opacity:0; pointer-events:none; display:flex; align-items:center; justify-content:center; text-align:center;
+  }
+  #wake h1{ margin:0; font-family:"Anton", "Arial Narrow", sans-serif; font-weight:400; font-size:clamp(2.6rem, 8vw, 6.5rem); letter-spacing:.08em; text-transform:uppercase; color:#f5f2ee; text-shadow:0 0 40px rgba(200,64,47,.35); }
+
+  #back{ position:fixed; left:24px; top:22px; z-index:9; font-size:0.62rem; letter-spacing:.16em; text-transform:uppercase; color:var(--dim); text-decoration:none; }
+  #back:hover{ color:#fff; }
+  #enter{ position:fixed; left:50%; bottom:7vh; transform:translateX(-50%); z-index:9; opacity:0; pointer-events:none; font-size:0.72rem; letter-spacing:.24em; text-transform:uppercase; color:#f5f2ee; text-decoration:none; padding:14px 26px; border:1px solid rgba(245,242,238,.35); transition:background .25s, border-color .25s; }
+  #enter:hover{ background:rgba(200,64,47,.9); border-color:#c8402f; }
+  #loading{ position:fixed; inset:0; z-index:20; background:#2a1a24; display:flex; align-items:center; justify-content:center; transition:opacity 0.9s ease; font-size:0.7rem; letter-spacing:0.3em; text-transform:uppercase; color:var(--dim); }
+  @media (max-width:700px){ #card{ left:6vw; right:6vw; max-width:none; bottom:12vh; } }
+</style>
+</head>
+<body>
+<canvas id="gl"></canvas>
+<div id="track"></div>
+
+<div id="title"><b>Sonoran Dream</b><span>a walk through the desert, in six plants</span></div>
+<div id="card">
+  <div id="cardNum" class="mono"></div>
+  <div id="cardName"></div>
+  <div id="cardLatin"></div>
+  <div id="cardFact"></div>
+</div>
+<div id="hint" class="mono"><span>scroll</span><i></i></div>
+<div id="meter"><div id="meterFill"></div></div>
+<div id="statLabel" class="mono"></div>
+<a id="back" class="mono" href="../">&larr; 48th State Studios</a>
+<a id="enter" class="mono" href="../">Enter the studio &rarr;</a>
+<div id="wake"><h1>Wake up.</h1></div>
+<div id="loading" class="mono">entering the dream</div>
+
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Noir &amp; Ivoire — Wedding Planning &amp; Design</title>
+<meta name="description" content="Noir &amp; Ivoire — bespoke wedding planning and design. Where two become one.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,400&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink: #151412;
+    --ink-soft: #3a3733;
+    --ink-dim: #6f6a62;
+    --paper: #f7f3ea;
+    --paper-raised: #efe9dc;
+    --rule: rgba(21,20,18,0.14);
+    --rule-strong: rgba(21,20,18,0.4);
+    --line-thin: rgba(247,243,234,0.55);
+    --font-serif: 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
+    --font-sans: 'Montserrat', 'Helvetica Neue', Arial, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0; background:var(--paper); color:var(--ink);
+    font-family:var(--font-sans); font-weight:300;
+    -webkit-font-smoothing:antialiased;
+  }
+  img,video{max-width:100%; display:block;}
+  a{color:inherit; text-decoration:none;}
+  h1,h2,h3{font-family:var(--font-serif); font-weight:500; margin:0;}
+  .eyebrow{
+    font-family:var(--font-sans); font-size:0.72rem; letter-spacing:0.32em;
+    text-transform:uppercase; font-weight:500; color:var(--ink-dim);
+  }
+
+  /* ===== Header ===== */
+  .site-header{
+    position:fixed; top:0; left:0; right:0; z-index:100;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:28px 5%; background:transparent;
+    transition:background 0.5s ease, padding 0.4s ease, backdrop-filter 0.5s ease;
+  }
+  .site-header.scrolled{
+    background:rgba(21,20,18,0.72);
+    backdrop-filter:blur(10px);
+    padding:16px 5%;
+  }
+  .brand{
+    font-family:var(--font-serif); font-size:1.5rem; letter-spacing:0.08em;
+    color:var(--paper); font-weight:500;
+  }
+  .brand small{display:block; font-family:var(--font-sans); font-size:0.56rem; letter-spacing:0.35em; font-weight:400; color:rgba(247,243,234,0.72); margin-top:2px;}
+  nav.main-nav{display:flex; gap:44px;}
+  nav.main-nav a{
+    font-size:0.72rem; letter-spacing:0.18em; text-transform:uppercase;
+    color:var(--paper); font-weight:400; position:relative; padding-bottom:4px;
+  }
+  nav.main-nav a::after{
+    content:''; position:absolute; left:0; bottom:0; width:0; height:1px;
+    background:var(--paper); transition:width 0.35s ease;
+  }
+  nav.main-nav a:hover::after{width:100%;}
+  .menu-btn{display:none; flex-direction:column; gap:5px; background:none; border:none; cursor:pointer; padding:6px;}
+  .menu-btn span{width:26px; height:1px; background:var(--paper); display:block;}
+
+  /* ===== Hero ===== */
+  .hero{
+    position:relative; width:100%; height:100dvh; overflow:hidden;
+    display:flex; align-items:center; justify-content:center; text-align:center;
+  }
+  .hero-video{
+    position:fixed; inset:0; width:100%; height:100%;
+    object-fit:cover; z-index:-2;
+    filter:grayscale(1) contrast(1.12) brightness(0.9);
+  }
+  .hero-overlay{
+    position:fixed; inset:0; z-index:-1;
+    background:
+      linear-gradient(180deg, rgba(10,10,9,0.55) 0%, rgba(10,10,9,0.25) 32%, rgba(10,10,9,0.35) 68%, rgba(10,10,9,0.75) 100%);
+  }
+  .hero-content{max-width:720px; padding:0 24px; color:var(--paper);}
+  .hero-content .eyebrow{color:rgba(247,243,234,0.78); margin-bottom:22px;}
+  .hero-content h1{
+    font-size:clamp(2.6rem, 7vw, 5.4rem); line-height:1.05; font-weight:500;
+    letter-spacing:0.01em;
+  }
+  .hero-content h1 em{font-style:italic; font-weight:300;}
+  .hero-content p{
+    margin:26px auto 0; max-width:480px; font-size:1rem; line-height:1.8;
+    color:rgba(247,243,234,0.82); font-weight:300;
+  }
+  .cta{
+    display:inline-block; margin-top:38px; padding:16px 42px;
+    border:1px solid var(--line-thin); color:var(--paper);
+    font-size:0.72rem; letter-spacing:0.22em; text-transform:uppercase;
+    transition:background 0.4s ease, color 0.4s ease;
+  }
+  .cta:hover{background:var(--paper); color:var(--ink);}
+  .scroll-cue{
+    position:absolute; bottom:38px; left:50%; transform:translateX(-50%);
+    display:flex; flex-direction:column; align-items:center; gap:10px;
+    color:rgba(247,243,234,0.75);
+  }
+  .scroll-cue .line{width:1px; height:46px; background:rgba(247,243,234,0.5); position:relative; overflow:hidden;}
+  .scroll-cue .line::after{
+    content:''; position:absolute; top:-100%; left:0; width:100%; height:100%;
+    background:var(--paper); animation:scrollLine 2.2s ease-in-out infinite;
+  }
+  @keyframes scrollLine{ 0%{top:-100%;} 60%{top:100%;} 100%{top:100%;} }
+  .scroll-cue span{font-size:0.6rem; letter-spacing:0.25em; text-transform:uppercase;}
+
+  /* ===== spacer so fixed video shows through before content overlaps ===== */
+  .hero-spacer{height:100dvh;}
+
+  /* ===== About ===== */
+  .about{
+    position:relative; z-index:2; background:var(--paper);
+    padding:0 6% 130px; margin-top:-14vh;
+    border-radius:28px 28px 0 0;
+    box-shadow:0 -40px 70px rgba(21,20,18,0.18);
+  }
+  .story-track{
+    max-width:640px; margin:0 auto; display:flex; flex-direction:column; align-items:center;
+    text-align:center; padding-top:90px;
+  }
+  .monogram{
+    width:118px; height:118px; border-radius:50%; border:1px solid var(--rule-strong);
+    display:flex; align-items:center; justify-content:center; background:var(--paper-raised);
+  }
+  .monogram svg{width:52px; height:52px;}
+  .dash{
+    width:1px; height:110px; margin:22px 0;
+    background:repeating-linear-gradient(180deg, var(--rule-strong) 0 6px, transparent 6px 13px);
+  }
+  .story-track .eyebrow{margin-bottom:16px;}
+  .story-track p.lead{font-size:1.18rem; line-height:1.9; font-weight:300; color:var(--ink-soft);}
+  .slogan{
+    font-family:var(--font-serif); font-style:italic; font-size:1.9rem;
+    font-weight:500; margin:8px 0; color:var(--ink);
+  }
+  .story-track p.body{font-size:0.98rem; line-height:1.9; color:var(--ink-dim); font-weight:300;}
+  .stats-row{
+    display:flex; gap:50px; margin-top:56px; padding-top:44px;
+    border-top:1px solid var(--rule); flex-wrap:wrap; justify-content:center;
+  }
+  .stats-row div{text-align:center;}
+  .stats-row b{display:block; font-family:var(--font-serif); font-size:2.2rem; font-weight:500;}
+  .stats-row span{font-size:0.65rem; letter-spacing:0.18em; text-transform:uppercase; color:var(--ink-dim);}
+
+  /* ===== Gallery (meander) ===== */
+  .gallery{position:relative; z-index:2; background:var(--ink); color:var(--paper); padding:130px 8% 150px;}
+  .gallery-head{text-align:center; margin-bottom:80px;}
+  .gallery-head .eyebrow{color:rgba(247,243,234,0.65); margin-bottom:16px;}
+  .gallery-head h2{font-size:clamp(2rem, 4vw, 3.1rem); color:var(--paper); font-weight:500;}
+  .gallery-track{max-width:760px; margin:0 auto; display:flex; flex-direction:column; align-items:center;}
+  .g-item{
+    width:33%; margin-top:26px; opacity:1; transform:translate(var(--tx,0), 0);
+  }
+  .g-item:first-child{margin-top:0;}
+  .g-frame{
+    aspect-ratio:4/3; border-radius:3px; overflow:hidden; position:relative;
+    background:linear-gradient(150deg, #2a2926 0%, #171614 60%, #0c0b0a 100%);
+    border:1px solid rgba(247,243,234,0.12);
+    clip-path:inset(-1px 20%);
+    transform:scale(1);
+    will-change:transform, clip-path;
+  }
+  .g-frame::before{
+    content:''; position:absolute; inset:0;
+    background-image:radial-gradient(circle at 30% 20%, rgba(247,243,234,0.08), transparent 55%);
+  }
+  .g-frame svg{width:42%; height:42%; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); opacity:0.9;}
+  .g-frame .idx{
+    position:absolute; top:16px; left:18px; font-family:var(--font-sans);
+    font-size:0.62rem; letter-spacing:0.16em; color:rgba(247,243,234,0.5);
+  }
+  .g-cap{margin-top:10px; text-align:center;}
+  .g-cap .t{font-family:var(--font-serif); font-size:0.92rem; font-style:italic; color:var(--paper);}
+  .g-cap .s{font-size:0.54rem; letter-spacing:0.14em; text-transform:uppercase; color:rgba(247,243,234,0.5); margin-top:3px;}
+
+  .g-item:nth-child(1){--tx:-12%;}
+  .g-item:nth-child(2){--tx:20%;}
+  .g-item:nth-child(3){--tx:-26%;}
+  .g-item:nth-child(4){--tx:10%;}
+  .g-item:nth-child(5){--tx:-8%;}
+  .g-item:nth-child(6){--tx:28%;}
+  .g-item:nth-child(7){--tx:-24%;}
+  .g-item:nth-child(8){--tx:14%;}
+  .g-item:nth-child(9){--tx:-10%;}
+  .g-item:nth-child(10){--tx:18%;}
+  .g-item:nth-child(11){--tx:-28%;}
+  .g-item:nth-child(12){--tx:16%;}
+  .g-item:nth-child(13){--tx:-6%;}
+  .g-item:nth-child(14){--tx:24%;}
+  .g-item:nth-child(15){--tx:-18%;}
+  .g-item:nth-child(16){--tx:8%;}
+  .g-item:nth-child(17){--tx:-14%;}
+  .g-item:nth-child(18){--tx:22%;}
+  .g-item:nth-child(19){--tx:-8%;}
+  .g-item:nth-child(20){--tx:12%;}
+
+  /* ===== Contact ===== */
+  .contact{
+    position:relative; z-index:2; background:var(--paper); text-align:center;
+    padding:150px 6%;
+  }
+  .contact .eyebrow{margin-bottom:20px;}
+  .contact h2{font-size:clamp(2.1rem, 5vw, 3.4rem); max-width:680px; margin:0 auto; line-height:1.25;}
+  .contact h2 em{font-style:italic; font-weight:300;}
+  .contact p{max-width:480px; margin:26px auto 0; color:var(--ink-dim); line-height:1.9; font-size:0.98rem;}
+  .contact .cta{border-color:var(--rule-strong); color:var(--ink); margin-top:40px;}
+  .contact .cta:hover{background:var(--ink); color:var(--paper);}
+
+  /* ===== Footer ===== */
+  footer{
+    position:relative; z-index:2; background:var(--ink); color:rgba(247,243,234,0.6);
+    padding:50px 6% 34px; text-align:center; border-top:1px solid rgba(247,243,234,0.1);
+  }
+  footer .brand{color:var(--paper); font-size:1.15rem; margin-bottom:14px;}
+  footer .flinks{display:flex; gap:30px; justify-content:center; margin:18px 0; flex-wrap:wrap;}
+  footer .flinks a{font-size:0.68rem; letter-spacing:0.14em; text-transform:uppercase; color:rgba(247,243,234,0.75);}
+  footer .fine{font-size:0.68rem; letter-spacing:0.05em; color:rgba(247,243,234,0.35); margin-top:20px;}
+
+  @media (max-width: 760px){
+    nav.main-nav{display:none;}
+    .menu-btn{display:flex;}
+    .about{margin-top:-8vh;}
+    .g-item{width:56%;}
+    .g-item:nth-child(n){--tx:0%;}
+    .stats-row{gap:30px;}
+  }
+</style>
+</head>
+<body>
+
+<header class="site-header" id="siteHeader">
+  <a class="brand" href="#top">NOIR &amp; IVOIRE<small>Wedding Planning &amp; Design</small></a>
+  <nav class="main-nav">
+    <a href="#about">About</a>
+    <a href="#gallery">Gallery</a>
+    <a href="#contact">Contact</a>
+  </nav>
+  <button class="menu-btn" id="menuBtn" aria-label="Open menu"><span></span><span></span><span></span></button>
+</header>
+
+<div id="top"></div>
+
+<section class="hero">
+  <video class="hero-video" autoplay muted loop playsinline poster="">
+    <source src="assets/hero-champagne.mp4" type="video/mp4">
+  </video>
+  <div class="hero-overlay"></div>
+  <div class="hero-content">
+    <div class="eyebrow">Wedding Planning &amp; Design — Est. 2026</div>
+    <h1>Where Two Lives<br><em>Become One</em></h1>
+    <p>Bespoke wedding planning for couples who want their story told in every detail — from the first toast to the last dance.</p>
+    <a class="cta" href="#contact">Begin Your Story</a>
+  </div>
+  <div class="scroll-cue"><span>Scroll</span><div class="line"></div></div>
+</section>
+
+<div class="hero-spacer"></div>
+
+<section class="about" id="about">
+  <div class="story-track">
+    <div class="monogram">
+      <svg viewBox="0 0 64 64" fill="none" stroke="var(--ink)" stroke-width="1.4">
+        <circle cx="24" cy="32" r="13"/>
+        <circle cx="40" cy="32" r="13"/>
+      </svg>
+    </div>
+    <div class="dash"></div>
+    <div class="eyebrow">Our Story</div>
+    <p class="lead">Noir &amp; Ivoire began with a simple belief: a wedding should feel like the two people it's for — nothing borrowed, nothing generic.</p>
+    <div class="dash"></div>
+    <p class="slogan">"Two hearts, one vision."</p>
+    <p class="body">We handle the seating charts and the vendor contracts so you can hold the champagne glass, not the clipboard. Every event we plan is designed from a blank page — no templates, no packages, just your day.</p>
+    <div class="stats-row">
+      <div><b>120+</b><span>Weddings Planned</span></div>
+      <div><b>14</b><span>Cities</span></div>
+      <div><b>100%</b><span>One-of-One Designs</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="gallery" id="gallery">
+  <div class="gallery-head">
+    <div class="eyebrow">Selected Work</div>
+    <h2>A Gallery of Moments</h2>
+  </div>
+  <div class="gallery-track">
+
+    <div class="g-item"><div class="g-frame"><span class="idx">01</span>
+      <svg viewBox="0 0 64 64" fill="none" stroke="#f7f3ea" stroke-width="1.3"><path d="M32 54 C14 40, 8 28, 16 20 C22 14, 30 17, 32 24 C34 17, 42 14, 48 20 C56 28, 50 40, 32 54 Z"/></svg>
+    </div><div class="g-cap"><div class="t">The Proposal</div><div class="s">Positano, Italy</div></div></div>
+
+    <div class="g-item"><div class="g-frame"><span class="idx">02</span>
+      <svg viewBox="0 0 64 64" fill="none" stroke="#f7f3ea" stroke-width="1.3"><path d="M32 8 L32 44 M22 44 L42 44 M26 44 C26 52 24 56 20 58 M38 44 C38 52 40 56 44 58 M20 20 C20 20 24 26 32 26 C40 26 44 20 44 20"/></svg>
+    </div><div class="g-cap"><div class="t">The First Toast</div><div class="s">Napa Valley, CA</div></div></div>
+
+    <div class="g-item"><div class="g-frame"><span class="idx">03</span>
+      <svg viewBox="0 0 64 64" fill="none" stroke="#f7f3ea" stroke-width="1.3"><path d="M12 40 Q32 12 52 40" /><path d="M12 40 L52 40" /><path d="M20 40 L20 30 M28 40 L28 24 M36 40 L36 24 M44 40 L44 30"/></svg>
+    </div><div class="g-cap"><div class="t">The Ceremony Arch</div><div class="s">Hudson Valley, NY</div></div></div>
+
+    <div class="g-item"><div class="g-frame"><span class="idx">04</span>
+      <svg viewBox="0 0 64 64" fill="none" stroke="#f7f3ea" stroke-width="1.3"><circle cx="22" cy="32" r="11"/><circle cx="42" cy="32" r="11"/></svg>
+    </div><div class="g-cap"><div class="t">The Rings</div><div class="s">Charleston, SC</div></div></div>
+
+    <div class="g-item"><div class="g-frame"><span class="idx">05</span>
+      <svg viewBox="0 0 64 64" fill="none" stroke="#f7f3ea" stroke-width="1.3"><path d="M32 10 C40 10 46 16 46 24 C46 34 32 46 32 46 C32 46 18 34 18 24 C18 16 24 10 32 10 Z"/><path d="M32 46 L32 56 M24 56 L40 56"/></svg>
+    </div><div class="g-cap"><div class="t">The Bouquet</div><div class="s">Savannah, GA</div></div></div>
+
+    <div class="g-item"><div class="g-frame"><span class="idx">06</span>
+      <svg viewBox="0 0 64 64" fill="none" stroke="#f7f3ea" stroke-width="1.3"><path d="M16 48 C16 48 24 30 32 30 C40 30 48 48 48 48"/><circle cx="32" cy="18" r="8"/></svg>
+    </div><div class="g-cap"><div class="t">The First Dance</div><div class="s">Lake Como, Italy</div></div></div>
+
+    <div class="g-item"><div class="g-frame"><span class="idx">07</span>
+      <svg viewBox="0 0 64 64" fill="none" stroke="#f7f3ea" stroke-width="1.3"><path d="M16 44 L48 44 L44 24 L20 24 Z"/><path d="M20 24 C20 24 26 14 32 14 C38 14 44 24 44 24"/><path d="M32 44 L32 52"/></svg>
+    </div><div class="g-cap"><div class="t">The Cake</div><div class="s">Aspen, CO</div></div></div>
+
+    <div class="g-item"><div class="g-frame"><span class="idx">08</span>
+      <svg viewBox="0 0 64 64" fill="none" stroke="#f7f3ea" stroke-width="1.3"><path d="M12 50 C12 50 18 14 32 14 C46 14 52 50 52 50" stroke-dasharray="1 6" stroke-linecap="round"/></svg>
+    </div><div class="g-cap"><div class="t">The Send-Off</div><div class="s">Martha's Vineyard, MA</div></div></div>
+
+    <div class="g-item"><div class="g-frame"><span class="idx">09</span>
+      <svg viewBox="0 0 64 64" fill="none" stroke="#f7f3ea" stroke-width="1.3"><path d="M20 12 L20 52 M44 12 L44 52 M14 20 L26 20 M38 20 L50 20 M14 44 L26 44 M38 44 L50 44"/></svg>
+    </div><div class="g-cap"><div class="t">The Tablescape</div><div class="s">Tulum, Mexico</div></div></div>
+
+    <div class="g-item"><div class="g-frame"><span class="idx">10</span>
+      <svg viewBox="0 0 64 64" fill="none" stroke="#f7f3ea" stroke-width="1.3"><path d="M32 12 L32 52 M20 52 L44 52 M22 12 L42 12"/><path d="M20 22 C20 22 26 26 32 22 C38 18 44 22 44 22"/></svg>
+    </div><div class="g-cap"><div class="t">The Send-Off Sparklers</div><div class="s">Big Sur, CA</div></div></div>
+
+    <div class="g-item"><div class="g-frame"><span class="idx">11</span>
+      <svg viewBox="0 0 64 64" fill="none" stroke="#f7f3ea" stroke-width="1.3"><path d="M32 18 C24 14 14 16 14 16 L14 46 C14 46 24 44 32 48 C40 44 50 46 50 46 L50 16 C50 16 40 14 32 18 Z"/><path d="M32 18 L32 48"/></svg>
+    </div><div class="g-cap"><div class="t">The Vows</div><div class="s">Aix-en-Provence, France</div></div></div>
+
+    <div class="g-item"><div class="g-frame"><span class="idx">12</span>
+      <svg viewBox="0 0 64 64" fill="none" stroke="#f7f3ea" stroke-width="1.3"><path d="M14 50 C14 50 22 30 32 30 C42 30 50 14 50 14" stroke-dasharray="1 5" stroke-linecap="round"/><path d="M44 14 L50 14 L50 20"/></svg>
+    </div><div class="g-cap"><div class="t">The Aisle Walk</div><div class="s">Amalfi Coast, Italy</div></div></div>
+
+    <div class="g-item"><div class="g-frame"><span class="idx">13</span>
+      <svg viewBox="0 0 64 64" fill="none" stroke="#f7f3ea" stroke-width="1.3"><circle cx="18" cy="20" r="2"/><rect x="30" y="14" width="4" height="4" transform="rotate(20 32 16)"/><circle cx="46" cy="22" r="2"/><rect x="20" y="38" width="4" height="4" transform="rotate(-15 22 40)"/><circle cx="34" cy="46" r="2"/><rect x="44" y="40" width="4" height="4" transform="rotate(35 46 42)"/></svg>
+    </div><div class="g-cap"><div class="t">The Confetti Toss</div><div class="s">Marrakech, Morocco</div></div></div>
+
+    <div class="g-item"><div class="g-frame"><span class="idx">14</span>
+      <svg viewBox="0 0 64 64" fill="none" stroke="#f7f3ea" stroke-width="1.3"><path d="M16 14 L32 34 L48 14 Z"/><path d="M32 34 L32 52 M22 52 L42 52"/></svg>
+    </div><div class="g-cap"><div class="t">The Signature Cocktail</div><div class="s">Palm Springs, CA</div></div></div>
+
+    <div class="g-item"><div class="g-frame"><span class="idx">15</span>
+      <svg viewBox="0 0 64 64" fill="none" stroke="#f7f3ea" stroke-width="1.3"><rect x="14" y="16" width="36" height="30" rx="1"/><path d="M32 16 L32 46"/><path d="M40 12 L46 18 L26 38 L20 38 L20 32 Z"/></svg>
+    </div><div class="g-cap"><div class="t">The Guest Book</div><div class="s">Nantucket, MA</div></div></div>
+
+    <div class="g-item"><div class="g-frame"><span class="idx">16</span>
+      <svg viewBox="0 0 64 64" fill="none" stroke="#f7f3ea" stroke-width="1.3"><path d="M16 52 L16 26 C16 14 48 14 48 26 L48 52"/><path d="M16 52 L48 52"/></svg>
+    </div><div class="g-cap"><div class="t">The Grand Entrance</div><div class="s">Scottsdale, AZ</div></div></div>
+
+    <div class="g-item"><div class="g-frame"><span class="idx">17</span>
+      <svg viewBox="0 0 64 64" fill="none" stroke="#f7f3ea" stroke-width="1.3"><path d="M32 52 L32 14"/><path d="M32 20 C24 18 18 24 20 32 C28 32 32 26 32 20 Z"/><path d="M32 32 C40 30 46 36 44 44 C36 44 32 38 32 32 Z"/></svg>
+    </div><div class="g-cap"><div class="t">The Garden Ceremony</div><div class="s">Sonoma, CA</div></div></div>
+
+    <div class="g-item"><div class="g-frame"><span class="idx">18</span>
+      <svg viewBox="0 0 64 64" fill="none" stroke="#f7f3ea" stroke-width="1.3"><circle cx="32" cy="32" r="4"/><path d="M32 14 L32 20 M32 44 L32 50 M14 32 L20 32 M44 32 L50 32 M19 19 L23 23 M41 41 L45 45 M45 19 L41 23 M23 41 L19 45"/></svg>
+    </div><div class="g-cap"><div class="t">The Sparkler Tunnel</div><div class="s">Jackson Hole, WY</div></div></div>
+
+    <div class="g-item"><div class="g-frame"><span class="idx">19</span>
+      <svg viewBox="0 0 64 64" fill="none" stroke="#f7f3ea" stroke-width="1.3"><path d="M38 16 C30 16 24 22 24 30 C24 38 30 44 38 44 C33 41 30 36 30 30 C30 24 33 19 38 16 Z"/><path d="M46 20 L47 23 L50 24 L47 25 L46 28 L45 25 L42 24 L45 23 Z"/></svg>
+    </div><div class="g-cap"><div class="t">The Late-Night Dance Floor</div><div class="s">Miami, FL</div></div></div>
+
+    <div class="g-item"><div class="g-frame"><span class="idx">20</span>
+      <svg viewBox="0 0 64 64" fill="none" stroke="#f7f3ea" stroke-width="1.3"><path d="M14 44 L24 44 L22 20 L16 20 Z"/><path d="M40 40 L50 44 L46 22 L42 24 Z"/><path d="M19 20 L19 12 M46 22 L48 15"/></svg>
+    </div><div class="g-cap"><div class="t">The Final Toast</div><div class="s">Santorini, Greece</div></div></div>
+
+  </div>
+</section>
+
+<section class="contact" id="contact">
+  <div class="eyebrow">Let's Begin</div>
+  <h2>Every love story deserves <em>one perfect day.</em></h2>
+  <p>Tell us your date, your city, and your vision — we'll take it from there.</p>
+  <a class="cta" href="mailto:hello@noirivoire.com">hello@noirivoire.com</a>
+</section>
+
+<footer>
+  <div class="brand">NOIR &amp; IVOIRE</div>
+  <div class="flinks">
+    <a href="#about">About</a>
+    <a href="#gallery">Gallery</a>
+    <a href="#contact">Contact</a>
+    <a href="mailto:hello@noirivoire.com">Email</a>
+  </div>
+  <div class="fine">© 2026 Noir &amp; Ivoire Wedding Planning. All rights reserved.</div>
+</footer>
+
+<script>
+  // header state on scroll
+  const header = document.getElementById('siteHeader');
+  window.addEventListener('scroll', () => {
+    header.classList.toggle('scrolled', window.scrollY > 60);
+  }, { passive: true });
+
+  // Scroll-scrubbed gallery pop: each photo fades up, overshoots slightly past
+  // full size, then settles into its resting side-crop as it reaches its place
+  // in the viewport -- same mechanic spotted on newmixcoffee.com's gallery.
+  const gItems = Array.from(document.querySelectorAll('.g-item')).map(item => ({
+    item, frame: item.querySelector('.g-frame')
+  }));
+  let tickingGallery = false;
+  function updateGalleryPop() {
+    const vh = window.innerHeight;
+    const enterAt = vh * 1.05;   // item center at/below this = not yet reached
+    const settleAt = vh * 0.4;   // item center at/above this = fully settled
+    gItems.forEach(({ item, frame }) => {
+      const r = item.getBoundingClientRect();
+      const centerY = r.top + r.height / 2;
+      let p = (enterAt - centerY) / (enterAt - settleAt);
+      p = Math.min(1, Math.max(0, p));
+      const opacity = 0.35 + 0.65 * p;
+      const scale = 1 + 0.12 * Math.sin(p * Math.PI); // overshoot, then settle back to 1
+      const clip = (20 * p).toFixed(2);
+      item.style.opacity = opacity.toFixed(3);
+      frame.style.transform = `scale(${scale.toFixed(4)})`;
+      frame.style.clipPath = `inset(-1px ${clip}%)`;
+    });
+    tickingGallery = false;
+  }
+  function queueGalleryPop() {
+    if (!tickingGallery) { requestAnimationFrame(updateGalleryPop); tickingGallery = true; }
+  }
+  window.addEventListener('scroll', queueGalleryPop, { passive: true });
+  window.addEventListener('resize', queueGalleryPop);
+  updateGalleryPop();
+
+  // mobile menu (simple toggle -> reuses main nav as a full-bleed overlay)
+  const menuBtn = document.getElementById('menuBtn');
+  const nav = document.querySelector('.main-nav');
+  menuBtn.addEventListener('click', () => {
+    const open = nav.style.display === 'flex';
+    if (open) {
+      nav.style.display = '';
+    } else {
+      nav.style.cssText = 'display:flex; position:fixed; inset:0; flex-direction:column; align-items:center; justify-content:center; gap:34px; background:rgba(21,20,18,0.96); font-size:1rem;';
+    }
+  });
+</script>
+
+</body>
+</html>

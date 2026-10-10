@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Particle Dissolve Intro — Test</title>
+<style>
+  html,body{margin:0; padding:0; height:100%; background:#050505; overflow:hidden;}
+  #stage{position:fixed; inset:0; display:block;}
+  #hud{
+    position:fixed; left:0; right:0; bottom:36px; display:flex; flex-direction:column;
+    align-items:center; gap:14px; font-family:'Consolas','SFMono-Regular',monospace;
+    color:rgba(255,255,255,0.55); z-index:10;
+  }
+  #hud .phase{font-size:0.7rem; letter-spacing:0.18em; text-transform:uppercase;}
+  #hud button{
+    background:transparent; border:1px solid rgba(255,255,255,0.3); color:#fff;
+    font-family:inherit; font-size:0.7rem; letter-spacing:0.14em; text-transform:uppercase;
+    padding:10px 26px; cursor:pointer; border-radius:2px; transition:background 0.25s, border-color 0.25s;
+  }
+  #hud button:hover{background:rgba(255,255,255,0.1); border-color:rgba(255,255,255,0.6);}
+  #controls{
+    position:fixed; top:24px; left:24px; z-index:10; display:flex; gap:10px; align-items:center;
+    font-family:'Consolas','SFMono-Regular',monospace; font-size:0.68rem; color:rgba(255,255,255,0.45);
+  }
+  #controls input{
+    background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.2); color:#fff;
+    font-family:inherit; font-size:0.72rem; padding:7px 10px; border-radius:2px; width:180px;
+  }
+  #controls span{letter-spacing:0.12em; text-transform:uppercase;}
+</style>
+</head>
+<body>
+
+<canvas id="stage"></canvas>
+
+<div id="controls">
+  <span>Text</span>
+  <input id="textInput" type="text" value="SAND" maxlength="16">
+</div>
+
+<div id="hud">
+  <div class="phase" id="phaseLabel">assembling</div>
+  <button id="replayBtn">Replay</button>
+</div>
+
+<script>
+(function(){
+  const canvas = document.getElementById('stage');
+  const ctx = canvas.getContext('2d');
+  const phaseLabel = document.getElementById('phaseLabel');
+  const replayBtn = document.getElementById('replayBtn');
+  const textInput = document.getElementById('textInput');
+
+  let dpr = Math.min(window.devicePixelRatio || 1, 2);
+  let W, H;
+  function resize(){
+    W = window.innerWidth; H = window.innerHeight;
+    canvas.width = W * dpr; canvas.height = H * dpr;
+    canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  resize();
+  window.addEventListener('resize', () => { resize(); buildParticles(); });
+
+  // ---- pointer (drag-to-mix nod: nearby grains get pushed, then settle back) ----
+  const pointer = { x: -9999, y: -9999, active: false };
+  canvas.addEventListener('pointermove', e => { pointer.x = e.clientX; pointer.y = e.clientY; pointer.active = true; });
+  canvas.addEventListener('pointerleave', () => { pointer.active = false; });
+
+  let particles = [];
+  const GRID_STEP = 3;       // sample spacing across the glyph bitmap -- lower = denser sand
+  const HOLD_MS = 1400;      // how long the word sits fully assembled before it disperses
+  const DISPERSE_MS = 1700;  // how long the scatter-and-fade takes
+
+  let phase = 'assemble';    // assemble -> hold -> disperse -> done
+  let phaseStart = performance.now();
+
+  function buildParticles(){
+    const word = (textInput.value || 'SAND').toUpperCase();
+    const off = document.createElement('canvas');
+    off.width = W; off.height = H;
+    const octx = off.getContext('2d');
+    let fontSize = Math.min(W * 0.16, H * 0.32);
+    octx.textAlign = 'center';
+    octx.textBaseline = 'middle';
+    octx.fillStyle = '#fff';
+    octx.font = `800 ${fontSize}px Arial, sans-serif`;
+    // shrink to fit width with some margin
+    while (octx.measureText(word).width > W * 0.86 && fontSize > 10) {
+      fontSize -= 2;
+      octx.font = `800 ${fontSize}px Arial, sans-serif`;
+    }
+    octx.fillText(word, W / 2, H / 2);
+    const img = octx.getImageData(0, 0, W, H).data;
+
+    particles = [];
+    for (let y = 0; y < H; y += GRID_STEP) {
+      for (let x = 0; x < W; x += GRID_STEP) {
+        const alpha = img[(y * W + x) * 4 + 3];
+        if (alpha > 140) {
+          // jitter the sample point a little so the grain isn't on a rigid grid
+          const hx = x + (Math.random() - 0.5) * GRID_STEP;
+          const hy = y + (Math.random() - 0.5) * GRID_STEP;
+          particles.push({
+            hx, hy,
+            x: hx, y: hy,
+            size: 0.7 + Math.random() * 1.5,
+            baseAlpha: 0.5 + Math.random() * 0.5,
+            noiseSeed: Math.random() * 1000,
+            // disperse direction: mostly outward/upward like wind lifting sand off the page
+            vx: (Math.random() - 0.5) * 1.6,
+            vy: -0.4 - Math.random() * 1.8,
+            drag: 0.985 + Math.random() * 0.01,
+            settleFrom: { x: hx + (Math.random() - 0.5) * W * 0.7, y: hy + (Math.random() - 0.5) * H * 0.7 }
+          });
+        }
+      }
+    }
+  }
+  buildParticles();
+
+  function setPhase(p){
+    phase = p; phaseStart = performance.now();
+    phaseLabel.textContent = p;
+  }
+  textInput.addEventListener('change', () => { buildParticles(); setPhase('assemble'); });
+  replayBtn.addEventListener('click', () => { buildParticles(); setPhase('assemble'); });
+
+  function easeOutCubic(t){ return 1 - Math.pow(1 - t, 3); }
+  function easeInCubic(t){ return t * t * t; }
+
+  function frame(now){
+    ctx.fillStyle = 'rgba(5,5,5,1)';
+    ctx.fillRect(0, 0, W, H);
+
+    const elapsed = now - phaseStart;
+
+    if (phase === 'assemble') {
+      const t = Math.min(1, elapsed / 900);
+      const e = easeOutCubic(t);
+      for (const p of particles) {
+        p.x = p.settleFrom.x + (p.hx - p.settleFrom.x) * e;
+        p.y = p.settleFrom.y + (p.hy - p.settleFrom.y) * e;
+      }
+      if (t >= 1) setPhase('hold');
+    } else if (phase === 'hold') {
+      const t = elapsed / 1000;
+      for (const p of particles) {
+        // fine idle drift so the settled word still reads as grain, not a static bitmap
+        const nx = Math.sin(t * 1.6 + p.noiseSeed) * 0.35;
+        const ny = Math.cos(t * 1.3 + p.noiseSeed * 1.3) * 0.35;
+        let tx = p.hx + nx, ty = p.hy + ny;
+        if (pointer.active) {
+          const dx = tx - pointer.x, dy = ty - pointer.y;
+          const d2 = dx * dx + dy * dy;
+          const r = 70;
+          if (d2 < r * r) {
+            const d = Math.sqrt(d2) || 0.001;
+            const push = (1 - d / r) * 18;
+            tx += (dx / d) * push;
+            ty += (dy / d) * push;
+          }
+        }
+        p.x += (tx - p.x) * 0.25;
+        p.y += (ty - p.y) * 0.25;
+      }
+      if (elapsed >= HOLD_MS) setPhase('disperse');
+    } else if (phase === 'disperse') {
+      const t = Math.min(1, elapsed / DISPERSE_MS);
+      for (const p of particles) {
+        p.vx *= p.drag; p.vy *= p.drag;
+        p.vy -= 0.01; // gentle upward wind
+        p.x += p.vx; p.y += p.vy;
+      }
+      if (t >= 1) setPhase('done');
+    }
+
+    // draw
+    const fadeOut = phase === 'disperse' ? 1 - easeInCubic(Math.min(1, elapsed / DISPERSE_MS)) : 1;
+    ctx.fillStyle = '#fff';
+    for (const p of particles) {
+      const a = p.baseAlpha * fadeOut;
+      if (a <= 0.01) continue;
+      ctx.globalAlpha = a;
+      ctx.fillRect(p.x, p.y, p.size, p.size);
+    }
+    ctx.globalAlpha = 1;
+
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  // Debug hooks -- harmless in production, useful for automated testing of this sandbox.
+  window.__sandDebug = {
+    getPhase: () => phase,
+    getParticleCount: () => particles.length,
+    forcePhase: (p) => setPhase(p),
+    step: (ms) => frame(performance.now() + ms)
+  };
+})();
+</script>
+
+</body>
+</html>

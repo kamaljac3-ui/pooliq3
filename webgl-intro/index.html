@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WebGL Flight — Stage 2</title>
+<style>
+  :root{ --ink:#f4f1ea; --dim:rgba(244,241,234,0.55); }
+  html{ background:#050505; }
+  html.lenis, html.lenis body{ height:auto; }
+  .lenis.lenis-smooth{ scroll-behavior:auto !important; }
+  .lenis.lenis-stopped{ overflow:hidden; }
+  body{ margin:0; background:#050505; color:var(--ink); font-family:'Helvetica Neue', Arial, sans-serif; -webkit-font-smoothing:antialiased; }
+  canvas#gl{ position:fixed; inset:0; width:100%; height:100%; display:block; z-index:0; touch-action:none; }
+
+  /* fixed UI */
+  .mono{ font-family:'Consolas','SFMono-Regular',monospace; }
+  #statLabel{ position:fixed; left:24px; bottom:22px; z-index:5; font-size:0.62rem; letter-spacing:0.1em; opacity:0.5; }
+  #replayBtn{
+    position:fixed; left:24px; bottom:46px; z-index:5; background:none; border:none; color:var(--dim);
+    font-size:0.62rem; letter-spacing:0.14em; text-transform:uppercase; cursor:pointer; padding:0;
+  }
+  #replayBtn:hover{ color:#fff; }
+  #hint{
+    position:fixed; left:50%; bottom:30px; transform:translateX(-50%); z-index:5; opacity:0; pointer-events:none;
+    display:flex; flex-direction:column; align-items:center; gap:10px; font-size:0.62rem; letter-spacing:0.28em; text-transform:uppercase; color:var(--dim);
+  }
+  #hint i{ display:block; width:1px; height:42px; background:linear-gradient(var(--dim), transparent); animation:drip 2.2s ease-in-out infinite; transform-origin:top; }
+  @keyframes drip{ 0%{ transform:scaleY(0); } 50%{ transform:scaleY(1); } 100%{ transform:scaleY(1); opacity:0; } }
+  #meter{ position:fixed; right:26px; top:50%; transform:translateY(-50%); width:1px; height:120px; background:rgba(244,241,234,0.18); z-index:5; }
+  #meterFill{ position:absolute; inset:0; background:var(--ink); transform-origin:top; transform:scaleY(0); }
+
+  /* scroll content */
+  main#chapters{ position:relative; z-index:2; }
+  .chapter{ min-height:125vh; display:flex; align-items:center; padding:0 8vw; box-sizing:border-box; }
+  .chapter.first{ min-height:100vh; }
+  .chapter.right{ justify-content:flex-end; text-align:right; }
+  .chapter.center{ justify-content:center; text-align:center; }
+  .chapter .inner{ max-width:440px; opacity:0; will-change:transform, opacity; }
+  .chapter .num{ font-size:0.68rem; letter-spacing:0.3em; color:var(--dim); margin-bottom:18px; }
+  .chapter h2{ margin:0 0 18px; font-weight:300; font-size:clamp(2rem, 4.4vw, 3.6rem); line-height:1.05; letter-spacing:-0.01em; }
+  .chapter p{ margin:0; font-size:0.95rem; line-height:1.75; color:var(--dim); }
+  @media (max-width:700px){ .chapter .inner{ max-width:none; } .chapter.right{ text-align:left; justify-content:flex-start; } }
+</style>
+</head>
+<body>
+<canvas id="gl"></canvas>
+
+<button id="replayBtn" class="mono">↻ replay intro</button>
+<div id="statLabel" class="mono"></div>
+<div id="hint" class="mono"><span>scroll</span><i></i></div>
+<div id="meter"><div id="meterFill"></div></div>
+
+<main id="chapters">
+  <section class="chapter first"></section>
+
+  <section class="chapter">
+    <div class="inner">
+      <div class="num mono">01 — GRAINS</div>
+      <h2>A quarter-million grains.</h2>
+      <p>Every grain is a position and a velocity stored in a texture, updated by a shader each frame. The sand you just touched never touches the CPU.</p>
+    </div>
+  </section>
+
+  <section class="chapter right">
+    <div class="inner">
+      <div class="num mono">02 — THE CORE</div>
+      <h2>One mesh, shaped by noise.</h2>
+      <p>A plain icosahedron whose vertices ride a 3D simplex field, faceted in the fragment shader and lit only by a rim glow.</p>
+    </div>
+  </section>
+
+  <section class="chapter">
+    <div class="inner">
+      <div class="num mono">03 — FLIGHT</div>
+      <h2>Scroll is the camera.</h2>
+      <p>Your scroll position is a number between 0 and 1. That number walks a spline for the camera and another for where it looks.</p>
+    </div>
+  </section>
+
+  <section class="chapter right">
+    <div class="inner">
+      <div class="num mono">04 — PASSAGE</div>
+      <h2>Through the knot.</h2>
+      <p>A torus knot, a dust trail seeded along the flight path, and bloom that only the brightest things in the frame bleed into.</p>
+    </div>
+  </section>
+
+  <section class="chapter center">
+    <div class="inner">
+      <div class="num mono">05 — PORTAL</div>
+      <h2>Your scene goes here.</h2>
+      <p>Stage 2 of a build. Swap the core for a product, a landscape, a character — the pipeline stays the same.</p>
+    </div>
+  </section>
+</main>
+
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>
