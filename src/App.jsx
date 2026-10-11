@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 
 const PARAMS = [
   { key: "chlorine", label: "Free chlorine", unit: "ppm", min: 0, max: 10, step: 0.2, ideal: "1-3 ppm", idealMin: 1, idealMax: 3, target: 2,
@@ -122,7 +122,7 @@ const NOT_SERVICEABLE_REASONS = [
 ];
 
 const DEFAULT_CUSTOMERS = [
-  { name: "Alvarez residence - 214 Cactus Wren Dr", gallons: 15000, poolType: "Gunite", poolSurround: "Deck", town: "Amagansett", frontOfHousePhoto: null,
+  { name: "Alvarez residence - 214 Cactus Wren Dr", gallons: 15000, poolType: "Gunite", poolSurround: "Deck", town: "Scottsdale", frontOfHousePhoto: null,
     hasDogs: true, dogNotes: "Two labs in the backyard, friendly but loud. Owner prefers they're kept inside during service if possible.",
     gateCode: "4471", entryInstructions: "Side gate on the north side of the house, next to the AC unit. Latch is a slide bolt above the handle.",
     coverLocation: "Cover is on the pool when not in use.", coverStorage: "Store rolled cover on the wall mount inside the pool equipment enclosure.",
@@ -131,7 +131,7 @@ const DEFAULT_CUSTOMERS = [
     lastLinerReplacement: "", lastPumpReplacement: "2023-06", skimmerBasketType: "Pentair 513200 standard",
     returnCount: 3, hasAutofill: true, hasPool: true, hasHotTub: true, hotTubGallons: 400, hotTubFilterType: "Cartridge - Pentair Pleatco PWW50", lastFilterCleaning: "2026-07-18",
     contacts: [{ name: "Maria Alvarez", phone: "(602) 555-0114", email: "malvarez@email.com" }] },
-  { name: "Desert Ridge HOA - Pool 3", gallons: 42000, poolType: "Gunite", poolSurround: "Patio", town: "East Hampton", frontOfHousePhoto: null,
+  { name: "Desert Ridge HOA - Pool 3", gallons: 42000, poolType: "Gunite", poolSurround: "Patio", town: "Phoenix", frontOfHousePhoto: null,
     hasDogs: false, dogNotes: "",
     gateCode: "8823#", entryInstructions: "Enter through the maintenance gate on the east side of the clubhouse, not the resident gate.",
     coverLocation: "No cover - pool stays uncovered year-round.", coverStorage: "N/A",
@@ -140,7 +140,7 @@ const DEFAULT_CUSTOMERS = [
     lastLinerReplacement: "", lastPumpReplacement: "2021-09", skimmerBasketType: "Commercial deck-level skimmers (4)",
     returnCount: 6, hasAutofill: true, hasPool: true, hasHotTub: false, hotTubGallons: null, hotTubFilterType: "", lastFilterCleaning: null,
     contacts: [{ name: "HOA Property Management", phone: "(480) 555-0199", email: "management@desertridgehoa.com" }] },
-  { name: "Whitfield residence - 88 Saguaro Ct", gallons: 18000, poolType: "Gunite", poolSurround: "Grass", town: "Sag Harbor", frontOfHousePhoto: null,
+  { name: "Whitfield residence - 88 Saguaro Ct", gallons: 18000, poolType: "Gunite", poolSurround: "Grass", town: "Paradise Valley", frontOfHousePhoto: null,
     hasDogs: true, dogNotes: "One large dog, kept in a kennel run on the side yard - does not have access to the pool area.",
     gateCode: "1290", entryInstructions: "Front gate combo box to the right of the driveway; walk straight back along the side yard.",
     coverLocation: "Cover is stored, not on the pool during the season.", coverStorage: "Folded cover lives in the shed behind the pump pad.",
@@ -149,7 +149,7 @@ const DEFAULT_CUSTOMERS = [
     lastLinerReplacement: "", lastPumpReplacement: "2024-01", skimmerBasketType: "Hayward SPX1091R",
     returnCount: 4, hasAutofill: false, hasPool: true, hasHotTub: true, hotTubGallons: 450, hotTubFilterType: "Cartridge - Hayward CX870RE", lastFilterCleaning: "2026-07-10",
     contacts: [{ name: "David Whitfield", phone: "(602) 555-0177", email: "dwhitfield@email.com" }, { name: "Susan Whitfield", phone: "(602) 555-0178", email: "" }] },
-  { name: "Thompson residence - 40 Camelback Rd", gallons: 12000, poolType: "Vinyl", poolSurround: "Deck", town: "Springs", frontOfHousePhoto: null,
+  { name: "Thompson residence - 40 Camelback Rd", gallons: 12000, poolType: "Vinyl", poolSurround: "Deck", town: "Tempe", frontOfHousePhoto: null,
     hasDogs: false, dogNotes: "",
     gateCode: "6604", entryInstructions: "Gate is on the west side, behind the RV parking pad.",
     coverLocation: "Cover is on the pool.", coverStorage: "Cover reel is mounted at the shallow end - crank handle is in the equipment shed.",
@@ -158,7 +158,7 @@ const DEFAULT_CUSTOMERS = [
     lastLinerReplacement: "2023-04", lastPumpReplacement: "2022-05", skimmerBasketType: "Jandy R0311800",
     returnCount: 2, hasAutofill: false, hasPool: true, hasHotTub: false, hotTubGallons: null, hotTubFilterType: "", lastFilterCleaning: null,
     contacts: [{ name: "Karen Thompson", phone: "(480) 555-0142", email: "kthompson@email.com" }] },
-  { name: "Sunview Apartments - Main Pool", gallons: 30000, poolType: "Gunite", poolSurround: "Patio", town: "Southampton", frontOfHousePhoto: null,
+  { name: "Sunview Apartments - Main Pool", gallons: 30000, poolType: "Gunite", poolSurround: "Patio", town: "Mesa", frontOfHousePhoto: null,
     hasDogs: false, dogNotes: "No pets allowed on property.",
     gateCode: "No code - leasing office unlocks at 6am", entryInstructions: "Access through the leasing office breezeway, then the pool gate on the left.",
     coverLocation: "No cover.", coverStorage: "N/A",
@@ -167,7 +167,7 @@ const DEFAULT_CUSTOMERS = [
     lastLinerReplacement: "", lastPumpReplacement: "2023-02", skimmerBasketType: "Commercial deck-level skimmers (3)",
     returnCount: 5, hasAutofill: true, hasPool: true, hasHotTub: false, hotTubGallons: null, hotTubFilterType: "", lastFilterCleaning: null,
     contacts: [{ name: "Leasing Office", phone: "(602) 555-0188", email: "leasing@sunviewapts.com" }] },
-  { name: "Reyes residence - 55 Ocotillo Way", gallons: null, poolType: "N/A - no pool", poolSurround: "Patio", town: "Wainscott", frontOfHousePhoto: null,
+  { name: "Reyes residence - 55 Ocotillo Way", gallons: null, poolType: "N/A - no pool", poolSurround: "Patio", town: "Fountain Hills", frontOfHousePhoto: null,
     hasDogs: false, dogNotes: "",
     gateCode: "2298", entryInstructions: "Side gate off the driveway, spa is on the back patio right past the gate.",
     coverLocation: "Spa cover is on the spa.", coverStorage: "N/A - stays on the spa.",
@@ -177,7 +177,7 @@ const DEFAULT_CUSTOMERS = [
     returnCount: 4, hasAutofill: false, hasPool: false, hasHotTub: true, hotTubGallons: 400,
     hotTubFilterType: "Cartridge - Pleatco PDM28", lastFilterCleaning: "2026-07-05",
     contacts: [{ name: "Ana Reyes", phone: "(602) 555-0163", email: "areyes@email.com" }] },
-  { name: "Bennett residence - 12 Paseo del Sol", gallons: 16500, poolType: "Gunite", poolSurround: "Deck", town: "Sagaponack", frontOfHousePhoto: null,
+  { name: "Bennett residence - 12 Paseo del Sol", gallons: 16500, poolType: "Gunite", poolSurround: "Deck", town: "Carefree", frontOfHousePhoto: null,
     hasDogs: false, dogNotes: "",
     gateCode: "3315", entryInstructions: "Gate on the east side, past the AC condensers.",
     coverLocation: "No cover - year round pool.", coverStorage: "N/A",
@@ -186,7 +186,7 @@ const DEFAULT_CUSTOMERS = [
     lastLinerReplacement: "", lastPumpReplacement: "2022-11", skimmerBasketType: "Pentair 513200 standard",
     returnCount: 2, hasAutofill: false, hasPool: true, hasHotTub: false, hotTubGallons: null, hotTubFilterType: "", lastFilterCleaning: null,
     contacts: [{ name: "Tom Bennett", phone: "(602) 555-0129", email: "tbennett@email.com" }] },
-  { name: "Ortiz residence - 901 Desert Willow Ln", gallons: 20000, poolType: "Gunite", poolSurround: "Grass", town: "Bridgehampton", frontOfHousePhoto: null,
+  { name: "Ortiz residence - 901 Desert Willow Ln", gallons: 20000, poolType: "Gunite", poolSurround: "Grass", town: "Gilbert", frontOfHousePhoto: null,
     hasDogs: true, dogNotes: "One small dog, usually kept indoors - shouldn't be an issue in the yard.",
     gateCode: "7742", entryInstructions: "Back gate behind the RV gate, code box on the post.",
     coverLocation: "Cover is on the pool.", coverStorage: "Cover reel at the shallow end.",
@@ -196,7 +196,7 @@ const DEFAULT_CUSTOMERS = [
     returnCount: 4, hasAutofill: true, hasPool: true, hasHotTub: true, hotTubGallons: 425,
     hotTubFilterType: "Cartridge - Jandy CV340", lastFilterCleaning: "2026-06-28",
     contacts: [{ name: "Luis Ortiz", phone: "(480) 555-0155", email: "lortiz@email.com" }] },
-  { name: "Fairview Townhomes - Community Pool", gallons: 35000, poolType: "Gunite", poolSurround: "Patio", town: "Water Mill", frontOfHousePhoto: null,
+  { name: "Fairview Townhomes - Community Pool", gallons: 35000, poolType: "Gunite", poolSurround: "Patio", town: "Chandler", frontOfHousePhoto: null,
     hasDogs: false, dogNotes: "No pets allowed on property.",
     gateCode: "9910", entryInstructions: "Gate code box at the main pool entrance off the parking lot.",
     coverLocation: "No cover.", coverStorage: "N/A",
@@ -205,7 +205,7 @@ const DEFAULT_CUSTOMERS = [
     lastLinerReplacement: "", lastPumpReplacement: "2022-04", skimmerBasketType: "Commercial deck-level skimmers (5)",
     returnCount: 6, hasAutofill: true, hasPool: true, hasHotTub: false, hotTubGallons: null, hotTubFilterType: "", lastFilterCleaning: null,
     contacts: [{ name: "HOA Management", phone: "(602) 555-0171", email: "info@fairviewhoa.com" }] },
-  { name: "Nguyen residence - 233 Copper Ridge Dr", gallons: 14000, poolType: "Vinyl", poolSurround: "Deck", town: "Northwest Woods", frontOfHousePhoto: null,
+  { name: "Nguyen residence - 233 Copper Ridge Dr", gallons: 14000, poolType: "Vinyl", poolSurround: "Deck", town: "Cave Creek", frontOfHousePhoto: null,
     hasDogs: false, dogNotes: "",
     gateCode: "5561", entryInstructions: "Side yard gate, latch is a hook-and-eye above the handle.",
     coverLocation: "Cover is on the pool.", coverStorage: "Cover reel at the shallow end.",
@@ -221,12 +221,12 @@ const POOL_TYPES = ["Gunite", "Vinyl", "N/A - no pool"];
 const SURROUND_TYPES = ["Deck", "Grass", "Patio", "Other"];
 
 const TOWNS = [
-  "Amagansett", "Northwest Woods", "Springs", "East Hampton", "Sag Harbor",
-  "Wainscott", "Sagaponack", "Bridgehampton", "Water Mill", "Southampton",
+  "Scottsdale", "Cave Creek", "Tempe", "Phoenix", "Paradise Valley",
+  "Fountain Hills", "Carefree", "Gilbert", "Chandler", "Mesa",
 ];
 
 const BLANK_CUSTOMER = {
-  name: "", gallons: 15000, poolType: "Gunite", poolSurround: "Deck", town: "East Hampton", frontOfHousePhoto: null,
+  name: "", gallons: 15000, poolType: "Gunite", poolSurround: "Deck", town: "Phoenix", frontOfHousePhoto: null,
   hasDogs: false, dogNotes: "", gateCode: "", entryInstructions: "",
   coverLocation: "", coverStorage: "", coverSize: "", pumpType: "", filterType: "",
   saltCellType: "", automationType: "", lastHeaterReplacement: "", lastLinerReplacement: "",
@@ -234,6 +234,111 @@ const BLANK_CUSTOMER = {
   hasPool: true, hasHotTub: false, hotTubGallons: null, hotTubFilterType: "", lastFilterCleaning: null,
   contacts: [{ name: "", phone: "", email: "" }],
 };
+
+// Fields offered on the spreadsheet-import mapping screen. `aliases` are
+// normalized (lowercase, no spaces/punctuation) header names we'll try to
+// auto-match against whatever the uploaded file calls that column, so most
+// exports don't need any manual mapping at all. `example` seeds the
+// downloadable blank template.
+const IMPORT_FIELDS = [
+  { key: "name", label: "Customer name / address", required: true, type: "text",
+    aliases: ["name", "customer", "customername", "client", "clientname", "customeraddress", "propertyname", "address"],
+    example: "Smith residence - 12 Ocean Ave" },
+  { key: "town", label: "Town", type: "enum", options: TOWNS,
+    aliases: ["town", "city"], example: "Paradise Valley" },
+  { key: "poolType", label: "Pool type", type: "enum", options: POOL_TYPES,
+    aliases: ["pooltype", "type"], example: "Gunite" },
+  { key: "poolSurround", label: "Pool surround", type: "enum", options: SURROUND_TYPES,
+    aliases: ["poolsurround", "surround"], example: "Deck" },
+  { key: "gallons", label: "Pool gallons", type: "number",
+    aliases: ["gallons", "poolgallons", "poolsize", "size"], example: "18000" },
+  { key: "hasPool", label: "Has a pool", type: "boolean",
+    aliases: ["haspool", "pool"], example: "Yes" },
+  { key: "hasHotTub", label: "Has a hot tub", type: "boolean",
+    aliases: ["hashottub", "hottub", "spa"], example: "No" },
+  { key: "hotTubGallons", label: "Hot tub gallons", type: "number",
+    aliases: ["hottubgallons", "spagallons"], example: "" },
+  { key: "hotTubFilterType", label: "Hot tub filter type", type: "text",
+    aliases: ["hottubfiltertype", "spafiltertype"], example: "" },
+  { key: "hasDogs", label: "Dogs on property", type: "boolean",
+    aliases: ["hasdogs", "dogs", "dogsonproperty", "pets"], example: "No" },
+  { key: "dogNotes", label: "Dog notes", type: "text",
+    aliases: ["dognotes", "petnotes"], example: "" },
+  { key: "gateCode", label: "Gate code", type: "text",
+    aliases: ["gatecode", "gate"], example: "1234" },
+  { key: "entryInstructions", label: "Backyard access instructions", type: "text",
+    aliases: ["entryinstructions", "access", "backyardaccess"], example: "Side gate off the driveway" },
+  { key: "coverLocation", label: "Pool cover location", type: "text",
+    aliases: ["coverlocation"], example: "On the pool" },
+  { key: "coverStorage", label: "Pool cover storage", type: "text",
+    aliases: ["coverstorage"], example: "" },
+  { key: "coverSize", label: "Pool cover size", type: "text",
+    aliases: ["coversize"], example: "" },
+  { key: "pumpType", label: "Pump type", type: "text",
+    aliases: ["pumptype", "pump"], example: "Pentair IntelliFlo VS" },
+  { key: "filterType", label: "Filter type", type: "text",
+    aliases: ["filtertype", "filter"], example: "" },
+  { key: "saltCellType", label: "Salt cell type", type: "text",
+    aliases: ["saltcelltype", "saltcell", "saltsystem"], example: "" },
+  { key: "automationType", label: "Automation type", type: "text",
+    aliases: ["automationtype", "automation"], example: "" },
+  { key: "skimmerBasketType", label: "Skimmer basket type", type: "text",
+    aliases: ["skimmerbaskettype", "skimmer"], example: "" },
+  { key: "returnCount", label: "Number of returns", type: "number",
+    aliases: ["returncount", "returns", "numberofreturns"], example: "2" },
+  { key: "hasAutofill", label: "Autofill installed", type: "boolean",
+    aliases: ["hasautofill", "autofill"], example: "No" },
+  { key: "lastHeaterReplacement", label: "Last heater replacement", type: "text",
+    aliases: ["lastheaterreplacement", "heaterreplaced"], example: "" },
+  { key: "lastPumpReplacement", label: "Last pump replacement", type: "text",
+    aliases: ["lastpumpreplacement", "pumpreplaced"], example: "" },
+  { key: "lastLinerReplacement", label: "Last liner replacement (vinyl only)", type: "text",
+    aliases: ["lastlinerreplacement", "linerreplaced"], example: "" },
+  { key: "contactName", label: "Contact name", type: "text",
+    aliases: ["contactname", "primarycontact", "contact"], example: "Jane Smith" },
+  { key: "contactPhone", label: "Contact phone", type: "text",
+    aliases: ["contactphone", "phone", "phonenumber"], example: "(631) 555-0100" },
+  { key: "contactEmail", label: "Contact email", type: "text",
+    aliases: ["contactemail", "email"], example: "jane@email.com" },
+];
+
+// Company signup (prototype only - not wired to a real backend/multi-tenant
+// data model yet, see CompanySignup for the caveat shown to the user).
+const SERVICE_OPTIONS = [
+  "Weekly pool maintenance & cleaning",
+  "Pool openings & closings",
+  "Gunite pool construction",
+  "Vinyl liner installation & replacement",
+  "Hot tub & spa service",
+  "Equipment repair & installation",
+  "Renovations & remodels",
+  "Automation & smart pool systems",
+];
+
+const EMPLOYEE_ROLE_OPTIONS = [
+  { value: "tech", label: "Technician" },
+  { value: "manager", label: "Service manager" },
+];
+
+const MONTH_NAMES = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
+// Placeholder rate card for the signup prototype - swap for the real price
+// once this is wired to an actual Stripe billing integration.
+const PRICE_PER_SEAT_MONTHLY = 25;
+const TRIAL_DAYS = 14;
+
+// Northeast pool companies typically only run ~6-7 months a year, while
+// Sunbelt companies run all 12 - this lets a seasonal signup only get billed
+// for the months they're actually open instead of paying for a year-round
+// plan they don't use. `start`/`end` are 1-12 (January-December); a season
+// that wraps the year boundary (e.g. Nov-Feb) is supported too.
+function activeMonthCount(mode, start, end) {
+  if (mode !== "seasonal") return 12;
+  return end >= start ? end - start + 1 : 12 - start + 1 + end;
+}
 
 const PUMP_DOWN_STEPS = [
   "Submersible pump placed at deep end", "Pool drained", "Power washed", "Refilling started",
@@ -339,6 +444,160 @@ function dateStr(offsetDays = 0) {
 }
 function todayStr() { return dateStr(0); }
 function tomorrowStr() { return dateStr(1); }
+
+// ---------- Spreadsheet import ----------
+
+// Minimal RFC4180-ish CSV parser: handles quoted fields, embedded commas,
+// escaped ("") quotes, and CRLF/LF line endings without a dependency.
+function parseCSV(text) {
+  const rows = [];
+  let row = [];
+  let field = "";
+  let inQuotes = false;
+  const s = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    if (inQuotes) {
+      if (c === '"') {
+        if (s[i + 1] === '"') { field += '"'; i++; }
+        else inQuotes = false;
+      } else {
+        field += c;
+      }
+    } else if (c === '"') {
+      inQuotes = true;
+    } else if (c === ",") {
+      row.push(field); field = "";
+    } else if (c === "\n") {
+      row.push(field); field = "";
+      rows.push(row); row = [];
+    } else {
+      field += c;
+    }
+  }
+  if (field !== "" || row.length > 0) { row.push(field); rows.push(row); }
+  return rows.filter((r) => !(r.length === 1 && r[0].trim() === ""));
+}
+
+function normalizeHeader(s) {
+  return (s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+// Tries to match each IMPORT_FIELDS entry to a column index by comparing
+// normalized header text against its alias list, so a well-labeled export
+// needs no manual mapping at all.
+function autoMapHeaders(headerRow) {
+  const normalized = headerRow.map(normalizeHeader);
+  const mapping = {};
+  for (const field of IMPORT_FIELDS) {
+    const idx = normalized.findIndex((h) => field.aliases.includes(h));
+    mapping[field.key] = idx === -1 ? null : idx;
+  }
+  return mapping;
+}
+
+function valueFor(row, mapping, key) {
+  const idx = mapping[key];
+  if (idx === null || idx === undefined) return "";
+  return (row[idx] ?? "").toString().trim();
+}
+
+function matchEnumValue(raw, options, fallback) {
+  if (!raw) return { value: fallback, warning: null };
+  const hit = options.find((o) => o.toLowerCase() === raw.toLowerCase());
+  return hit
+    ? { value: hit, warning: null }
+    : { value: fallback, warning: `"${raw}" not recognized - defaulted to "${fallback}"` };
+}
+
+function parseNumber(raw) {
+  if (!raw) return null;
+  const cleaned = raw.replace(/[^0-9.-]/g, "");
+  if (cleaned === "") return null;
+  const n = Number(cleaned);
+  return Number.isFinite(n) ? n : null;
+}
+
+function parseBooleanLoose(raw, fallback) {
+  if (!raw) return fallback;
+  const v = raw.trim().toLowerCase();
+  if (["yes", "y", "true", "1", "x"].includes(v)) return true;
+  if (["no", "n", "false", "0"].includes(v)) return false;
+  return fallback;
+}
+
+// Turns one parsed CSV row into a customer record (merged onto BLANK_CUSTOMER
+// defaults) plus any blocking errors (missing name) and non-blocking
+// warnings (unrecognized enum values, unparseable numbers) to surface in the
+// preview step.
+function buildImportedCustomer(row, mapping) {
+  const errors = [];
+  const warnings = [];
+
+  const name = valueFor(row, mapping, "name");
+  if (!name) errors.push("Missing customer name / address");
+
+  const town = matchEnumValue(valueFor(row, mapping, "town"), TOWNS, "");
+  if (town.warning) warnings.push(`Town: ${town.warning}`);
+
+  const poolType = matchEnumValue(valueFor(row, mapping, "poolType"), POOL_TYPES, "Gunite");
+  if (poolType.warning) warnings.push(`Pool type: ${poolType.warning}`);
+
+  const poolSurround = matchEnumValue(valueFor(row, mapping, "poolSurround"), SURROUND_TYPES, "Deck");
+  if (poolSurround.warning) warnings.push(`Pool surround: ${poolSurround.warning}`);
+
+  const gallonsRaw = valueFor(row, mapping, "gallons");
+  const gallons = parseNumber(gallonsRaw);
+  if (gallonsRaw && gallons === null) warnings.push(`Gallons: "${gallonsRaw}" isn't a number - left blank`);
+
+  const hasPool = parseBooleanLoose(valueFor(row, mapping, "hasPool"), true);
+  const hasHotTub = parseBooleanLoose(valueFor(row, mapping, "hasHotTub"), false);
+  const hotTubGallonsRaw = valueFor(row, mapping, "hotTubGallons");
+  const hotTubGallons = hasHotTub ? (parseNumber(hotTubGallonsRaw) ?? 400) : null;
+
+  const returnCount = parseNumber(valueFor(row, mapping, "returnCount")) ?? BLANK_CUSTOMER.returnCount;
+
+  const contactName = valueFor(row, mapping, "contactName");
+  const contactPhone = valueFor(row, mapping, "contactPhone");
+  const contactEmail = valueFor(row, mapping, "contactEmail");
+
+  const customer = {
+    ...BLANK_CUSTOMER,
+    name,
+    town: town.value,
+    poolType: poolType.value,
+    poolSurround: poolSurround.value,
+    gallons: gallons ?? BLANK_CUSTOMER.gallons,
+    hasPool,
+    hasHotTub,
+    hotTubGallons,
+    hotTubFilterType: valueFor(row, mapping, "hotTubFilterType"),
+    hasDogs: parseBooleanLoose(valueFor(row, mapping, "hasDogs"), false),
+    dogNotes: valueFor(row, mapping, "dogNotes"),
+    gateCode: valueFor(row, mapping, "gateCode"),
+    entryInstructions: valueFor(row, mapping, "entryInstructions"),
+    coverLocation: valueFor(row, mapping, "coverLocation"),
+    coverStorage: valueFor(row, mapping, "coverStorage"),
+    coverSize: valueFor(row, mapping, "coverSize"),
+    pumpType: valueFor(row, mapping, "pumpType"),
+    filterType: valueFor(row, mapping, "filterType"),
+    saltCellType: valueFor(row, mapping, "saltCellType"),
+    automationType: valueFor(row, mapping, "automationType"),
+    skimmerBasketType: valueFor(row, mapping, "skimmerBasketType"),
+    returnCount,
+    hasAutofill: parseBooleanLoose(valueFor(row, mapping, "hasAutofill"), false),
+    lastHeaterReplacement: valueFor(row, mapping, "lastHeaterReplacement"),
+    lastPumpReplacement: valueFor(row, mapping, "lastPumpReplacement"),
+    lastLinerReplacement: valueFor(row, mapping, "lastLinerReplacement"),
+    frontOfHousePhoto: null,
+    lastFilterCleaning: null,
+    contacts: contactName || contactPhone || contactEmail
+      ? [{ name: contactName, phone: contactPhone, email: contactEmail }]
+      : [{ name: "", phone: "", email: "" }],
+  };
+
+  return { customer, errors, warnings };
+}
 
 const TRANSLATIONS = {
   "Field log": "Registro de campo",
@@ -970,19 +1229,57 @@ function StopDetail({ s }) {
   );
 }
 
-function LoginScreen({ onLogin }) {
+function LoginScreen({ accounts, onLogin, onCreatePassword, onSignupClick }) {
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(true);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [err, setErr] = useState("");
   const [lang, setLang] = useState("en");
+
+  const trimmedId = identifier.trim();
+  const matchedAccount = trimmedId
+    ? accounts.find(
+        (a) => (a.phone && a.phone === trimmedId) || (a.email && a.email.toLowerCase() === trimmedId.toLowerCase())
+      )
+    : null;
+  const isPending = !!(matchedAccount && !matchedAccount.password);
+
+  function logInAs(account) {
+    onLogin({ id: account.phone || account.email, name: account.name, role: account.role, lang }, rememberMe);
+  }
 
   function submit(role) {
     if (!identifier.trim() || !password.trim()) {
       setErr(lang === "es" ? "Ingrese su teléfono o correo y una contraseña." : "Enter your phone or email and a password.");
       return;
     }
+    if (matchedAccount && matchedAccount.password) {
+      if (password !== matchedAccount.password) {
+        setErr("Incorrect password for this account.");
+        return;
+      }
+      setErr("");
+      logInAs(matchedAccount);
+      return;
+    }
     setErr("");
-    onLogin({ id: identifier.trim(), role, lang });
+    onLogin({ id: identifier.trim(), role, lang }, rememberMe);
+  }
+
+  function submitCreatePassword() {
+    if (!newPassword || newPassword.length < 4) {
+      setErr("Choose a password at least 4 characters long.");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setErr("Those passwords don't match.");
+      return;
+    }
+    setErr("");
+    onCreatePassword(matchedAccount.id, newPassword);
+    logInAs({ ...matchedAccount, password: newPassword });
   }
 
   return (
@@ -998,10 +1295,10 @@ function LoginScreen({ onLogin }) {
           <path d="M0,55 C50,30 100,30 150,55 C200,80 250,80 300,55 C330,38 360,38 400,55 L400,90 L0,90 Z" fill="rgba(255,255,255,0.22)" />
         </svg>
         <div className="brand-hero-content">
-          <div className="brand-name">IMMACULATE</div>
-          <div className="brand-sub">SWIMMING POOLS &amp; SPAS</div>
-          <div className="brand-tagline">Proudly serving the East End of Long Island</div>
-          <div className="brand-location">Sag Harbor, NY - Est. 2004</div>
+          <div className="brand-name">POOLIQ</div>
+          <div className="brand-sub">FIELD LOG FOR POOL PROS</div>
+          <div className="brand-tagline">Routes, water chemistry &amp; dosing in one place</div>
+          <div className="brand-location">Prototype</div>
         </div>
       </div>
       <div className="pfl-header">
@@ -1011,18 +1308,403 @@ function LoginScreen({ onLogin }) {
         <div>
           <label className="pfl-field-label">{t(lang, "Phone or email")}</label>
           <input className="pfl-text" type="text" placeholder="you@company.com" value={identifier}
-            onChange={(e) => setIdentifier(e.target.value)} />
+            onChange={(e) => { setIdentifier(e.target.value); setErr(""); }} />
         </div>
-        <div>
-          <label className="pfl-field-label">{t(lang, "Password")}</label>
-          <input className="pfl-text" type="password" placeholder="••••••••" value={password}
-            onChange={(e) => setPassword(e.target.value)} />
-        </div>
+
+        {!isPending && (
+          <div>
+            <label className="pfl-field-label">{t(lang, "Password")}</label>
+            <input className="pfl-text" type="password" placeholder="••••••••" value={password}
+              onChange={(e) => setPassword(e.target.value)} />
+          </div>
+        )}
+
         {err && <div className="error-msg">{err}</div>}
-        <button type="button" className="login-btn tech" onClick={() => submit("tech")}>{t(lang, "Log in as technician")}</button>
-        <button type="button" className="login-btn manager" onClick={() => submit("manager")}>{t(lang, "Log in as service manager")}</button>
-        <div className="login-note">{t(lang, "Prototype login - any phone/email and password combination works.")}</div>
+
+        {isPending ? (
+          <div className="pfl-card" style={{ margin: "4px 0 0", padding: "14px" }}>
+            <div className="follow-reason">
+              {matchedAccount.name.split(" ")[0]}, this is your first time logging in - create a password to
+              finish setting up your account.
+            </div>
+            <label className="pfl-field-label" style={{ marginTop: "10px" }}>New password</label>
+            <input className="pfl-text" type="password" placeholder="••••••••" value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)} />
+            <label className="pfl-field-label" style={{ marginTop: "10px" }}>Confirm password</label>
+            <input className="pfl-text" type="password" placeholder="••••••••" value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)} />
+            <label className="site-dog-toggle" style={{ marginTop: "12px" }}>
+              <input type="checkbox" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} />
+              Remember me on this device
+            </label>
+            <button type="button" className={`login-btn ${matchedAccount.role === "manager" ? "manager" : "tech"}`}
+              style={{ marginTop: "10px" }} onClick={submitCreatePassword}>
+              Create password &amp; log in
+            </button>
+          </div>
+        ) : (
+          <>
+            <label className="site-dog-toggle" style={{ margin: "2px 0 4px" }}>
+              <input type="checkbox" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} />
+              Remember me on this device
+            </label>
+            {matchedAccount ? (
+              <button type="button" className={`login-btn ${matchedAccount.role === "manager" ? "manager" : "tech"}`}
+                onClick={() => submit(matchedAccount.role)}>
+                Log in as {matchedAccount.name.split(" ")[0]}
+              </button>
+            ) : (
+              <>
+                <button type="button" className="login-btn tech" onClick={() => submit("tech")}>{t(lang, "Log in as technician")}</button>
+                <button type="button" className="login-btn manager" onClick={() => submit("manager")}>{t(lang, "Log in as service manager")}</button>
+              </>
+            )}
+            <div className="login-note">{t(lang, "Prototype login - any phone/email and password combination works.")}</div>
+          </>
+        )}
+
+        <button type="button" className="site-edit-link" onClick={onSignupClick}>
+          New pool company? Set up your account &rarr;
+        </button>
       </div>
+    </div>
+  );
+}
+
+function CompanySignup({ onBack, onComplete }) {
+  const [step, setStep] = useState("company"); // company | team | done
+  const [companyName, setCompanyName] = useState("");
+  const [contactName, setContactName] = useState("");
+  const [contactEmail, setContactEmail] = useState("");
+  const [contactPhone, setContactPhone] = useState("");
+  const [serviceArea, setServiceArea] = useState("");
+  const [services, setServices] = useState([]);
+  const [otherService, setOtherService] = useState("");
+  const [companyError, setCompanyError] = useState("");
+  const [employees, setEmployees] = useState([]);
+  const [operatingMode, setOperatingMode] = useState("yearRound"); // yearRound | seasonal
+  const [seasonStartMonth, setSeasonStartMonth] = useState(4); // April
+  const [seasonEndMonth, setSeasonEndMonth] = useState(10); // October
+  const [cardOnFile, setCardOnFile] = useState(null);
+  const [planError, setPlanError] = useState("");
+
+  function toggleService(s) {
+    setServices((cur) => (cur.includes(s) ? cur.filter((x) => x !== s) : [...cur, s]));
+  }
+
+  function submitCompany() {
+    if (!companyName.trim() || !contactName.trim() || !contactEmail.trim()) {
+      setCompanyError("Company name, your name, and email are required.");
+      return;
+    }
+    setCompanyError("");
+    setStep("team");
+  }
+
+  // Quick-set headcount (typed number) resizes the list up to 25, keeping
+  // whatever was already filled into rows that still exist after a shrink.
+  // Past 25, growth only happens one row at a time via "+ Add employee" -
+  // no cap there, just no bulk-jump so 200 blank rows can't appear at once.
+  const QUICK_SET_MAX = 25;
+  function changeEmployeeCount(raw) {
+    const count = Number.isFinite(raw) ? Math.max(0, Math.min(QUICK_SET_MAX, Math.round(raw))) : 0;
+    setEmployees((cur) => {
+      const next = cur.slice(0, count);
+      while (next.length < count) next.push({ name: "", phone: "", email: "", role: "tech" });
+      return next;
+    });
+  }
+  function addEmployeeRow() {
+    setEmployees((cur) => (cur.length >= 500 ? cur : [...cur, { name: "", phone: "", email: "", role: "tech" }]));
+  }
+  function removeEmployeeRow(i) {
+    setEmployees((cur) => cur.filter((_, idx) => idx !== i));
+  }
+  function updateEmployee(i, patch) {
+    setEmployees((cur) => cur.map((e, idx) => (idx === i ? { ...e, ...patch } : e)));
+  }
+
+  // Rows nobody actually filled in aren't a real person to invite (or bill
+  // for) - drop them rather than creating a login-less "ghost" seat.
+  const realEmployees = employees.filter((e) => e.name.trim() || e.phone.trim() || e.email.trim());
+  const totalHeadcount = realEmployees.length + 1;
+  const allServices = [...services, ...(otherService.trim() ? [otherService.trim()] : [])];
+  const activeMonths = activeMonthCount(operatingMode, seasonStartMonth, seasonEndMonth);
+  const monthlyCost = PRICE_PER_SEAT_MONTHLY * totalHeadcount;
+  const trialEndLabel = new Date(Date.now() + TRIAL_DAYS * 24 * 60 * 60 * 1000)
+    .toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" });
+
+  function submitPlan() {
+    if (!cardOnFile) {
+      setPlanError("Add a payment method to start your trial.");
+      return;
+    }
+    setPlanError("");
+    const stamp = Date.now();
+    const newAccounts = [
+      { id: `${stamp}-owner`, companyName, name: contactName, phone: contactPhone.trim(), email: contactEmail.trim(), role: "manager", password: null },
+      ...realEmployees.map((e, i) => ({
+        id: `${stamp}-emp-${i}`, companyName, name: e.name.trim(), phone: e.phone.trim(), email: e.email.trim(), role: e.role, password: null,
+      })),
+    ];
+    onComplete(newAccounts);
+    setStep("done");
+  }
+
+  if (step === "done") {
+    return (
+      <div className="pfl-root">
+        <style>{GLOBAL_STYLES}</style>
+        <div className="pfl-header"><h1>You're all set</h1></div>
+
+        <div className="pfl-card">
+          <label className="pfl-field-label">{companyName}</label>
+          <div className="site-row"><span>Contact</span><span className="site-value">{contactName} - {contactEmail}</span></div>
+          {contactPhone && <div className="site-row"><span>Phone</span><span className="site-value">{contactPhone}</span></div>}
+          {serviceArea && <div className="site-row"><span>Service area</span><span className="site-value">{serviceArea}</span></div>}
+          <div className="site-row stacked">
+            <span>Services</span>
+            <span className="site-value">{allServices.length > 0 ? allServices.join(", ") : "None selected"}</span>
+          </div>
+          <div className="site-row"><span>Team size</span><span className="site-value">{totalHeadcount}</span></div>
+        </div>
+
+        <div className="pfl-card">
+          <label className="pfl-field-label">Plan &amp; billing</label>
+          <div className="site-row">
+            <span>Operating</span>
+            <span className="site-value">
+              {operatingMode === "seasonal"
+                ? `Seasonal - ${MONTH_NAMES[seasonStartMonth - 1]}–${MONTH_NAMES[seasonEndMonth - 1]} (${activeMonths} mo/yr)`
+                : "Year-round"}
+            </span>
+          </div>
+          <div className="site-row">
+            <span>Rate</span>
+            <span className="site-value">${PRICE_PER_SEAT_MONTHLY}/seat &times; {totalHeadcount} = ${monthlyCost}/mo</span>
+          </div>
+          <div className="site-row"><span>Payment method</span><span className="site-value">{cardOnFile}</span></div>
+          <div className="site-row"><span>Free trial</span><span className="site-value">{TRIAL_DAYS} days - first charge {trialEndLabel}</span></div>
+        </div>
+
+        <div className="pfl-card">
+          <label className="pfl-field-label">Team - pending until first login</label>
+          <div className="follow-reason" style={{ marginBottom: "10px" }}>
+            Nobody has a password yet. Tell each person their login is their phone number (or email) - the first
+            time they enter it, they'll be prompted to create their own password.
+          </div>
+          <div className="route-row">
+            <div>
+              <div className="checkup-name">{contactName}</div>
+              <div className="checkup-reason">{contactPhone || contactEmail} - Owner / Service manager - Pending</div>
+            </div>
+          </div>
+          {realEmployees.map((e, i) => (
+            <div className="route-row" key={i}>
+              <div>
+                <div className="checkup-name">{e.name || `Employee ${i + 1}`}</div>
+                <div className="checkup-reason">
+                  {e.phone || e.email} - {EMPLOYEE_ROLE_OPTIONS.find((r) => r.value === e.role)?.label} - Pending
+                </div>
+              </div>
+            </div>
+          ))}
+          {employees.length > realEmployees.length && (
+            <div className="reading-ideal" style={{ marginTop: "8px" }}>
+              {employees.length - realEmployees.length} blank row{employees.length - realEmployees.length === 1 ? "" : "s"}
+              {" "}from your headcount weren't invited since no name, phone, or email was entered for them.
+            </div>
+          )}
+        </div>
+
+        <div className="follow-reason" style={{ marginBottom: "12px" }}>
+          Your account and your team's are saved on this device with real password creation - a refresh won't
+          lose them, and each phone number logs in for itself once they've set a password. What's still missing:
+          nobody gets a text or email automatically (you'll need to tell them their login is their phone
+          number), there's no real Stripe subscription behind the trial above, and everyone still sees
+          the shared demo data rather than data that actually belongs to {companyName || "your company"},
+          since multi-tenant data isolation isn't built yet.
+        </div>
+        <button type="button" className="endday-btn" onClick={onBack}>Back to login</button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="pfl-root">
+      <style>{GLOBAL_STYLES}</style>
+      <div className="pfl-header">
+        <h1>Set up your company</h1>
+        <span>Step {step === "company" ? "1" : step === "team" ? "2" : "3"} of 3</span>
+      </div>
+
+      {step === "company" && (
+        <>
+          <div className="pfl-card">
+            <label className="pfl-field-label">Company name</label>
+            <input className="pfl-text" value={companyName} onChange={(e) => setCompanyName(e.target.value)}
+              placeholder="e.g. Blue Wave Pool Service" />
+            <label className="pfl-field-label" style={{ marginTop: "10px" }}>Your name</label>
+            <input className="pfl-text" value={contactName} onChange={(e) => setContactName(e.target.value)} />
+            <div className="grid-2" style={{ marginTop: "10px" }}>
+              <div>
+                <label className="pfl-field-label">Email</label>
+                <input className="pfl-text" type="email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} />
+              </div>
+              <div>
+                <label className="pfl-field-label">Phone</label>
+                <input className="pfl-text" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} />
+              </div>
+            </div>
+            <label className="pfl-field-label" style={{ marginTop: "10px" }}>Service area</label>
+            <input className="pfl-text" placeholder="e.g. Phoenix Valley & Scottsdale" value={serviceArea}
+              onChange={(e) => setServiceArea(e.target.value)} />
+          </div>
+
+          <div className="pfl-card">
+            <label className="pfl-field-label">Services you offer</label>
+            <div className="task-grid">
+              {SERVICE_OPTIONS.map((s) => (
+                <button type="button" key={s} className={`task-chip ${services.includes(s) ? "on" : ""}`} onClick={() => toggleService(s)}>
+                  {s}
+                </button>
+              ))}
+            </div>
+            <label className="pfl-field-label" style={{ marginTop: "10px" }}>Other</label>
+            <input className="pfl-text" placeholder="Anything not listed above" value={otherService}
+              onChange={(e) => setOtherService(e.target.value)} />
+          </div>
+
+          {companyError && <div className="error-msg">{companyError}</div>}
+          <div className="site-edit-actions">
+            <button type="button" className="site-save-btn" onClick={submitCompany}>Continue to team setup</button>
+            <button type="button" className="site-cancel-btn" onClick={onBack}>Cancel</button>
+          </div>
+        </>
+      )}
+
+      {step === "team" && (
+        <>
+          <div className="pfl-card">
+            <label className="pfl-field-label">You</label>
+            <div className="route-row">
+              <div>
+                <div className="checkup-name">{contactName}</div>
+                <div className="checkup-reason">{contactEmail} - Owner / Service manager</div>
+              </div>
+            </div>
+          </div>
+
+          <div className="pfl-card">
+            <label className="pfl-field-label">How many other employees do you have?</label>
+            <input className="pfl-num" type="number" min="0" max={QUICK_SET_MAX} value={Math.min(employees.length, QUICK_SET_MAX)}
+              onChange={(e) => changeEmployeeCount(+e.target.value)} style={{ maxWidth: "120px" }} />
+            <div className="reading-ideal">
+              Sets up to {QUICK_SET_MAX} rows at once. Add each person's phone number below - that's how they'll
+              log in and create their own password the first time. More than {QUICK_SET_MAX}? Use
+              "+ Add employee" underneath the list for as many more as you need.
+            </div>
+
+            {employees.map((emp, i) => (
+              <div key={i} className="chem-row" style={{ flexWrap: "wrap", marginTop: "12px" }}>
+                <input className="pfl-select" type="text" placeholder="Name" value={emp.name}
+                  onChange={(e) => updateEmployee(i, { name: e.target.value })} />
+                <input className="pfl-select" type="tel" placeholder="Phone (their login)" value={emp.phone}
+                  onChange={(e) => updateEmployee(i, { phone: e.target.value })} />
+                <input className="pfl-select" type="email" placeholder="Email (optional)" value={emp.email}
+                  onChange={(e) => updateEmployee(i, { email: e.target.value })} />
+                <select className="pfl-unit" value={emp.role} onChange={(e) => updateEmployee(i, { role: e.target.value })}>
+                  {EMPLOYEE_ROLE_OPTIONS.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
+                </select>
+                <button type="button" onClick={() => removeEmployeeRow(i)} aria-label="Remove employee">&times;</button>
+              </div>
+            ))}
+            <button type="button" className="add-chem-btn" onClick={addEmployeeRow}>+ Add employee</button>
+          </div>
+
+          <div className="site-edit-actions">
+            <button type="button" className="site-save-btn" onClick={() => setStep("plan")}>Continue to plan &amp; payment</button>
+            <button type="button" className="site-cancel-btn" onClick={() => setStep("company")}>Back</button>
+          </div>
+        </>
+      )}
+
+      {step === "plan" && (
+        <>
+          <div className="pfl-card">
+            <label className="pfl-field-label">When does {companyName || "your business"} operate?</label>
+            <div className="task-grid">
+              <button type="button" className={`task-chip ${operatingMode === "yearRound" ? "on" : ""}`} onClick={() => setOperatingMode("yearRound")}>
+                Year-round
+              </button>
+              <button type="button" className={`task-chip ${operatingMode === "seasonal" ? "on" : ""}`} onClick={() => setOperatingMode("seasonal")}>
+                Seasonal
+              </button>
+            </div>
+            {operatingMode === "seasonal" && (
+              <div className="grid-2" style={{ marginTop: "10px" }}>
+                <div>
+                  <label className="pfl-field-label">Season starts</label>
+                  <select className="pfl-select" value={seasonStartMonth} onChange={(e) => setSeasonStartMonth(+e.target.value)}>
+                    {MONTH_NAMES.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="pfl-field-label">Season ends</label>
+                  <select className="pfl-select" value={seasonEndMonth} onChange={(e) => setSeasonEndMonth(+e.target.value)}>
+                    {MONTH_NAMES.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
+                  </select>
+                </div>
+              </div>
+            )}
+            <div className="reading-ideal">
+              {operatingMode === "seasonal"
+                ? `Billing runs ${activeMonths} month${activeMonths === 1 ? "" : "s"} a year (${MONTH_NAMES[seasonStartMonth - 1]}–${MONTH_NAMES[seasonEndMonth - 1]}) and pauses automatically the rest of the year.`
+                : "Billed monthly, all 12 months of the year."}
+            </div>
+          </div>
+
+          <div className="pfl-card dosing-card">
+            <label className="pfl-field-label">Estimated plan</label>
+            <div className="site-row"><span>Rate</span><span className="site-value">${PRICE_PER_SEAT_MONTHLY}/seat/month</span></div>
+            <div className="site-row"><span>Team size</span><span className="site-value">{totalHeadcount} seats</span></div>
+            <div className="site-row"><span>While active</span><span className="site-value">${monthlyCost}/mo</span></div>
+            {operatingMode === "seasonal" && (
+              <div className="site-row"><span>Estimated annual total</span><span className="site-value">${monthlyCost * activeMonths}/yr</span></div>
+            )}
+            <div className="dosing-note">Placeholder pricing for this prototype - swap in your real rate card once this is wired to Stripe.</div>
+          </div>
+
+          <div className="pfl-card">
+            <label className="pfl-field-label">Payment method</label>
+            <div className="follow-reason">
+              {TRIAL_DAYS}-day free trial starting today - you won't be charged until it ends, and you can cancel
+              before then. We use Stripe to store your card; PoolIQ never sees or stores your card number directly.
+            </div>
+            {cardOnFile ? (
+              <div className="site-row" style={{ marginTop: "10px" }}>
+                <span>Card on file</span>
+                <span className="site-value">
+                  {cardOnFile}
+                  <button type="button" className="site-edit-link" style={{ marginLeft: "10px" }} onClick={() => setCardOnFile(null)}>
+                    Change
+                  </button>
+                </span>
+              </div>
+            ) : (
+              <button type="button" className="add-chem-btn" onClick={() => setCardOnFile("Visa •••• 4242")}>
+                + Add payment method (Stripe test mode)
+              </button>
+            )}
+          </div>
+
+          {planError && <div className="error-msg">{planError}</div>}
+          <div className="site-edit-actions">
+            <button type="button" className="site-save-btn" onClick={submitPlan}>Start free trial</button>
+            <button type="button" className="site-cancel-btn" onClick={() => setStep("team")}>Back</button>
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -3090,9 +3772,194 @@ function CustomerLocationsView({ customers }) {
   );
 }
 
+function CustomerImportWizard({ customers, onImport, onClose }) {
+  const [step, setStep] = useState("upload"); // upload | map | preview
+  const [fileName, setFileName] = useState("");
+  const [headers, setHeaders] = useState([]);
+  const [rows, setRows] = useState([]);
+  const [mapping, setMapping] = useState({});
+  const [duplicateStrategy, setDuplicateStrategy] = useState("skip");
+  const [parseError, setParseError] = useState("");
+
+  function handleFile(file) {
+    if (!file) return;
+    setParseError("");
+    const reader = new FileReader();
+    reader.onload = () => {
+      const table = parseCSV(String(reader.result || ""));
+      if (table.length === 0) { setParseError("That file doesn't look like a CSV - no rows found."); return; }
+      const [headerRow, ...dataRows] = table;
+      const cleanRows = dataRows.filter((r) => r.some((cell) => cell.trim() !== ""));
+      if (cleanRows.length === 0) { setParseError("No data rows found under the header row."); return; }
+      setHeaders(headerRow);
+      setRows(cleanRows);
+      setFileName(file.name);
+      setMapping(autoMapHeaders(headerRow));
+      setStep("map");
+    };
+    reader.onerror = () => setParseError("Couldn't read that file - try again.");
+    reader.readAsText(file);
+  }
+
+  function downloadTemplate() {
+    const header = IMPORT_FIELDS.map((f) => f.label).join(",");
+    const example = IMPORT_FIELDS.map((f) => f.example || "").join(",");
+    const blob = new Blob([`${header}\n${example}\n`], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "poolIQ-customer-import-template.csv";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  const built = useMemo(
+    () => rows.map((row) => {
+      const { customer, errors, warnings } = buildImportedCustomer(row, mapping);
+      const isDuplicate = customers.some((c) => c.name === customer.name);
+      return { customer, errors, warnings, isDuplicate };
+    }),
+    [rows, mapping, customers]
+  );
+
+  const importable = built.filter((r) => r.errors.length === 0 && !(r.isDuplicate && duplicateStrategy === "skip"));
+  const blockedCount = built.filter((r) => r.errors.length > 0).length;
+  const duplicateCount = built.filter((r) => r.isDuplicate).length;
+  const nameMapped = mapping.name !== null && mapping.name !== undefined;
+
+  function confirmImport() {
+    onImport(importable.map((r) => r.customer));
+    onClose();
+  }
+
+  if (step === "upload") {
+    return (
+      <div className="pfl-card">
+        <label className="pfl-field-label">Import customers from a spreadsheet</label>
+        <div className="follow-reason">
+          Upload a CSV export from whatever you're using now - QuickBooks, an old spreadsheet, another CRM. It doesn't
+          need to match PoolIQ's format; you'll map its columns on the next screen.
+        </div>
+        <label className="capture-btn" style={{ marginTop: "12px", height: "auto", padding: "18px" }}>
+          <i className="capture-icon">+</i>
+          {fileName ? `Selected: ${fileName}` : "Choose a CSV file"}
+          <input type="file" accept=".csv,text/csv" onChange={(e) => handleFile(e.target.files[0])} />
+        </label>
+        {parseError && <div className="error-msg" style={{ marginTop: "10px" }}>{parseError}</div>}
+        <button type="button" className="site-edit-link" style={{ marginTop: "10px" }} onClick={downloadTemplate}>
+          Download a blank template instead
+        </button>
+        <div className="site-edit-actions">
+          <button type="button" className="site-cancel-btn" onClick={onClose}>Cancel</button>
+        </div>
+      </div>
+    );
+  }
+
+  if (step === "map") {
+    return (
+      <div className="pfl-card">
+        <label className="pfl-field-label">Map your columns</label>
+        <div className="follow-reason">
+          {fileName} - {rows.length} row{rows.length === 1 ? "" : "s"} found. Match each PoolIQ field to a column
+          from your file, or leave it unmapped to skip it.
+        </div>
+        <div style={{ marginTop: "12px" }}>
+          {IMPORT_FIELDS.map((f) => (
+            <div key={f.key} style={{ display: "flex", alignItems: "center", gap: "10px", marginTop: "8px" }}>
+              <label className="pfl-field-label" style={{ margin: 0, flex: "0 0 210px" }}>
+                {f.label}{f.required ? " *" : ""}
+              </label>
+              <select
+                className="pfl-select"
+                style={{ flex: 1 }}
+                value={mapping[f.key] ?? ""}
+                onChange={(e) => setMapping((m) => ({ ...m, [f.key]: e.target.value === "" ? null : Number(e.target.value) }))}
+              >
+                <option value="">-- Don't import --</option>
+                {headers.map((h, i) => <option key={i} value={i}>{h.trim() || `Column ${i + 1}`}</option>)}
+              </select>
+            </div>
+          ))}
+        </div>
+        {!nameMapped && (
+          <div className="error-msg" style={{ marginTop: "10px" }}>
+            Map the customer name / address column to continue - it's required.
+          </div>
+        )}
+        <div className="site-edit-actions">
+          <button type="button" className="site-save-btn" disabled={!nameMapped} onClick={() => setStep("preview")}>
+            Preview import
+          </button>
+          <button type="button" className="site-cancel-btn" onClick={() => setStep("upload")}>Back</button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="pfl-card">
+      <label className="pfl-field-label">Preview import</label>
+      <div className="follow-reason">
+        {importable.length} ready to import
+        {duplicateCount > 0 ? `, ${duplicateCount} match existing customers` : ""}
+        {blockedCount > 0 ? `, ${blockedCount} will be skipped (missing name)` : ""}.
+      </div>
+
+      {duplicateCount > 0 && (
+        <div style={{ marginTop: "10px" }}>
+          <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", fontWeight: 600, cursor: "pointer" }}>
+            <input type="radio" name="dupStrategy" checked={duplicateStrategy === "skip"} onChange={() => setDuplicateStrategy("skip")} />
+            Skip rows that match an existing customer name
+          </label>
+          <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", fontWeight: 600, marginTop: "6px", cursor: "pointer" }}>
+            <input type="radio" name="dupStrategy" checked={duplicateStrategy === "overwrite"} onChange={() => setDuplicateStrategy("overwrite")} />
+            Overwrite existing customers with the imported data
+          </label>
+        </div>
+      )}
+
+      <div style={{ maxHeight: "360px", overflowY: "auto", marginTop: "12px" }}>
+        {built.map((r, i) => (
+          <div className="stop-row" key={i}>
+            <div className="stop-summary">
+              <span
+                className="stop-dot"
+                style={{ background: r.errors.length ? "var(--danger)" : r.isDuplicate ? "var(--warn)" : "var(--good)" }}
+              />
+              <div className="stop-summary-text">
+                <div className="stop-customer">{r.customer.name || "(no name)"}</div>
+                {r.errors.length > 0 && (
+                  <div className="stop-time" style={{ color: "var(--danger)" }}>{r.errors.join("; ")}</div>
+                )}
+                {r.isDuplicate && (
+                  <div className="stop-time" style={{ color: "var(--warn)" }}>
+                    Matches an existing customer - will {duplicateStrategy === "overwrite" ? "overwrite it" : "be skipped"}
+                  </div>
+                )}
+                {r.warnings.length > 0 && <div className="stop-time">{r.warnings.join("; ")}</div>}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="site-edit-actions">
+        <button type="button" className="site-save-btn" disabled={importable.length === 0} onClick={confirmImport}>
+          Import {importable.length} customer{importable.length === 1 ? "" : "s"}
+        </button>
+        <button type="button" className="site-cancel-btn" onClick={() => setStep("map")}>Back</button>
+      </div>
+    </div>
+  );
+}
+
 function PoolProfilesManager({ customers, setCustomers }) {
   const [selectedName, setSelectedName] = useState(null);
   const [draft, setDraft] = useState(null);
+  const [importOpen, setImportOpen] = useState(false);
 
   function openCustomer(c) {
     setSelectedName(c.name);
@@ -3133,6 +4000,21 @@ function PoolProfilesManager({ customers, setCustomers }) {
   }
   function removeCustomer(name) {
     setCustomers((cs) => cs.filter((c) => c.name !== name));
+  }
+  function importCustomers(newCustomers) {
+    // Upsert by name: a name that already exists gets replaced in place
+    // (the "overwrite" path), anything new gets appended.
+    setCustomers((cs) => {
+      const byName = new Map(cs.map((c) => [c.name, c]));
+      for (const nc of newCustomers) byName.set(nc.name, nc);
+      return Array.from(byName.values());
+    });
+  }
+
+  if (importOpen) {
+    return (
+      <CustomerImportWizard customers={customers} onImport={importCustomers} onClose={() => setImportOpen(false)} />
+    );
   }
 
   if (draft) {
@@ -3323,6 +4205,230 @@ function PoolProfilesManager({ customers, setCustomers }) {
         </div>
       ))}
       <button type="button" className="add-chem-btn" onClick={addNew}>+ Add new pool</button>
+      <button type="button" className="add-chem-btn" onClick={() => setImportOpen(true)}>Import from spreadsheet</button>
+    </div>
+  );
+}
+
+// ---------- Billing report ----------
+
+const STOP_TYPE_LABELS = {
+  weekly: "Weekly Service",
+  hotTub: "Hot Tub Service",
+  opening: "Pool Opening",
+  reassembly: "Equipment Setup",
+  hoseOff: "Hose Off",
+  poolkeeper: "Poolkeeper Check",
+  hotTubDrain: "Hot Tub Drain & Refill",
+  pumpPickup: "Pump Pickup",
+};
+function stopTypeLabel(stopType) {
+  return STOP_TYPE_LABELS[stopType] || stopType;
+}
+function chemicalsSummary(chemicals) {
+  if (!chemicals || chemicals.length === 0) return "";
+  return chemicals.map((c) => `${c.type}: ${c.amount}${c.unit ? ` ${c.unit}` : ""}`).join("; ");
+}
+
+// Anything on a stop worth flagging to the office beyond the routine visit
+// itself - repairs, extra labor time, drains, freeze damage, pump pickups,
+// acid washes, sequestrant treatments. This is the "anything else extra
+// that can be billed" list; extend it here as new billable situations show
+// up in the field forms.
+function billableExtras(stop) {
+  const extras = [];
+  if (stop.repairNeeded) {
+    extras.push(`Repair reported - ${stop.repairIssueType}${stop.repairDescription ? `: ${stop.repairDescription}` : ""}`);
+  }
+  if (stop.onSiteLonger) {
+    extras.push(`On site longer than 30 min${stop.onSiteLongerNote ? ` - ${stop.onSiteLongerNote}` : ""}`);
+  }
+  if (stop.stopType === "hotTubDrain") {
+    extras.push(`Drain & refill (${stop.gallons ? `${stop.gallons.toLocaleString()} gal` : "spa"})${stop.drainReason ? ` - ${stop.drainReason}` : ""}`);
+  }
+  if (stop.stopType === "pumpPickup") {
+    extras.push(`Pump pickup${stop.pumpPickupReason ? ` - ${stop.pumpPickupReason}` : ""}`);
+  }
+  if (stop.acidWashed) {
+    extras.push(`Acid wash - ${stop.acidWashTarget || "pool"}`);
+  }
+  if (stop.freezeDamage) {
+    extras.push(`Freeze damage - ${stop.freezeDamageType}${stop.freezeDamageDescription ? `: ${stop.freezeDamageDescription}` : ""}`);
+  }
+  if (stop.cleanerType === HOT_TUB_CLEANER_TYPES[1]) {
+    extras.push(`Sequestrant treatment${stop.cleanerReason ? ` - ${stop.cleanerReason}` : ""}`);
+  }
+  return extras;
+}
+
+function BillingReport({ allStops, customers }) {
+  const [rangeStart, setRangeStart] = useState(dateStr(-28));
+  const [rangeEnd, setRangeEnd] = useState(todayStr());
+  const [techFilter, setTechFilter] = useState("");
+
+  function setLastFourWeeks() {
+    setRangeStart(dateStr(-28));
+    setRangeEnd(todayStr());
+  }
+  function setThisMonth() {
+    const now = new Date();
+    setRangeStart(new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10));
+    setRangeEnd(todayStr());
+  }
+
+  const knownTechs = [...new Set(allStops.map((s) => s.technician))].filter(Boolean);
+
+  // Only completed, actually-serviced visits count toward billing - a
+  // pending work order or a "couldn't service this stop" entry isn't
+  // something to invoice for.
+  const periodStops = allStops.filter((s) =>
+    s.sent && !s.pending && !s.notServiceable && s.dueDate >= rangeStart && s.dueDate <= rangeEnd &&
+    (!techFilter || s.technician === techFilter)
+  );
+
+  function tallyChemicals(stops) {
+    const totals = new Map();
+    for (const s of stops) {
+      for (const c of s.chemicals || []) {
+        const key = `${c.type}|${c.unit || ""}`;
+        totals.set(key, (totals.get(key) || 0) + (Number(c.amount) || 0));
+      }
+    }
+    return Array.from(totals.entries()).map(([key, amount]) => {
+      const [type, unit] = key.split("|");
+      return { type, unit, amount: Math.round(amount * 100) / 100 };
+    });
+  }
+  function chemListLabel(list) {
+    return list.map((c) => `${c.type}: ${c.amount}${c.unit ? ` ${c.unit}` : ""}`).join(", ");
+  }
+
+  const byCustomer = new Map();
+  for (const s of periodStops) {
+    if (!byCustomer.has(s.customer)) byCustomer.set(s.customer, []);
+    byCustomer.get(s.customer).push(s);
+  }
+  const customerGroups = Array.from(byCustomer.entries())
+    .map(([name, stops]) => {
+      const sorted = stops.slice().sort((a, b) => a.dueDate.localeCompare(b.dueDate));
+      return {
+        name,
+        town: customers.find((c) => c.name === name)?.town || "",
+        stops: sorted,
+        chemList: tallyChemicals(stops),
+        extras: sorted.flatMap((s) => billableExtras(s).map((text) => ({ date: s.dueDate, text }))),
+      };
+    })
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  const totalChemList = tallyChemicals(periodStops);
+  const totalExtras = periodStops.reduce((n, s) => n + billableExtras(s).length, 0);
+
+  function downloadCsv() {
+    const header = ["Date", "Technician", "Customer", "Town", "Service Type", "Chemicals Used", "Extra Billable Notes"];
+    const rows = periodStops
+      .slice()
+      .sort((a, b) => a.dueDate.localeCompare(b.dueDate) || a.customer.localeCompare(b.customer))
+      .map((s) => [
+        s.dueDate,
+        s.technician,
+        s.customer,
+        customers.find((c) => c.name === s.customer)?.town || "",
+        stopTypeLabel(s.stopType),
+        chemicalsSummary(s.chemicals),
+        billableExtras(s).join(" | "),
+      ]);
+    const csvEscape = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    const csv = [header, ...rows].map((row) => row.map(csvEscape).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `billing-report_${rangeStart}_to_${rangeEnd}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  return (
+    <div>
+      <div className="pfl-card">
+        <label className="pfl-field-label">Billing period</label>
+        <div className="task-grid">
+          <button type="button" className="task-chip" onClick={setLastFourWeeks}>Last 4 weeks</button>
+          <button type="button" className="task-chip" onClick={setThisMonth}>This month</button>
+        </div>
+        <div className="grid-2" style={{ marginTop: "10px" }}>
+          <div>
+            <label className="pfl-field-label">Start</label>
+            <input className="pfl-text" type="date" value={rangeStart} onChange={(e) => setRangeStart(e.target.value)} />
+          </div>
+          <div>
+            <label className="pfl-field-label">End</label>
+            <input className="pfl-text" type="date" value={rangeEnd} onChange={(e) => setRangeEnd(e.target.value)} />
+          </div>
+        </div>
+        <label className="pfl-field-label" style={{ marginTop: "10px" }}>Technician</label>
+        <select className="pfl-select" value={techFilter} onChange={(e) => setTechFilter(e.target.value)}>
+          <option value="">All technicians</option>
+          {knownTechs.map((tech) => <option key={tech} value={tech}>{tech}</option>)}
+        </select>
+      </div>
+
+      <div className="pfl-card dosing-card">
+        <label className="pfl-field-label">Summary</label>
+        <div className="site-row"><span>Visits in period</span><span className="site-value">{periodStops.length}</span></div>
+        <div className="site-row"><span>Customers billed</span><span className="site-value">{customerGroups.length}</span></div>
+        <div className="site-row"><span>Extra billable items</span><span className="site-value">{totalExtras}</span></div>
+        {totalChemList.length > 0 && (
+          <div className="site-row stacked">
+            <span>Chemicals used (all customers)</span>
+            <span className="site-value">{chemListLabel(totalChemList)}</span>
+          </div>
+        )}
+        <button type="button" className="submit-btn" style={{ marginTop: "12px" }} onClick={downloadCsv} disabled={periodStops.length === 0}>
+          Download CSV for the office
+        </button>
+        <div className="dosing-note">
+          One row per visit - date, tech, customer, chemicals used, and anything flagged as extra billable
+          (repairs, extra time on site, drains &amp; refills, freeze damage, pump pickups). Hand this file to
+          whoever prices and invoices.
+        </div>
+      </div>
+
+      {customerGroups.length === 0 && (
+        <div className="pfl-card"><div className="empty-log">No submitted visits in this period yet.</div></div>
+      )}
+
+      {customerGroups.map((g) => (
+        <div className="pfl-card" key={g.name}>
+          <label className="pfl-field-label">{g.name}{g.town ? ` - ${g.town}` : ""}</label>
+          <div className="follow-reason">{g.stops.length} visit{g.stops.length === 1 ? "" : "s"} in period</div>
+          {g.stops.map((s) => (
+            <div className="route-row" key={s.id}>
+              <div>
+                <div className="checkup-name">{s.dueDate} - {stopTypeLabel(s.stopType)}</div>
+                <div className="checkup-reason">{s.technician}</div>
+              </div>
+            </div>
+          ))}
+          {g.chemList.length > 0 && (
+            <>
+              <div className="pfl-field-label" style={{ marginTop: "10px" }}>Chemicals used</div>
+              <div className="site-note">{chemListLabel(g.chemList)}</div>
+            </>
+          )}
+          {g.extras.length > 0 && (
+            <>
+              <div className="pfl-field-label" style={{ marginTop: "10px", color: "var(--repair)" }}>Extra billable</div>
+              {g.extras.map((e, i) => (
+                <div className="follow-reason" key={i}>{e.date} - {e.text}</div>
+              ))}
+            </>
+          )}
+        </div>
+      ))}
     </div>
   );
 }
@@ -3404,12 +4510,15 @@ function ManagerView({ session, onLogout, allStops, setAllStops, managerRoute, s
         <button type="button" className={`mode-tab ${managerMode === "review" ? "on" : ""}`} onClick={() => setManagerMode("review")}>Review</button>
         <button type="button" className={`mode-tab ${managerMode === "profiles" ? "on" : ""}`} onClick={() => setManagerMode("profiles")}>Pool Profiles</button>
         <button type="button" className={`mode-tab ${managerMode === "locations" ? "on" : ""}`} onClick={() => setManagerMode("locations")}>Locations</button>
+        <button type="button" className={`mode-tab ${managerMode === "billing" ? "on" : ""}`} onClick={() => setManagerMode("billing")}>Billing</button>
       </div>
 
       {managerMode === "profiles" ? (
         <PoolProfilesManager customers={customers} setCustomers={setCustomers} />
       ) : managerMode === "locations" ? (
         <CustomerLocationsView customers={customers} />
+      ) : managerMode === "billing" ? (
+        <BillingReport allStops={allStops} customers={customers} />
       ) : (
         <>
       <div className="pfl-card">
@@ -3855,8 +4964,43 @@ function TechnicianView({ session, onLogout, allStops, setAllStops, customers, s
   );
 }
 
+// localStorage-backed persistence for accounts/session only - this is the
+// "remember me" layer, not the eventual real backend. Passwords are kept in
+// plain text here on purpose-of-convenience: everything in this prototype is
+// fake signup data on one browser, but a real backend must never do this -
+// passwords have to be hashed (bcrypt/argon2) server-side, never stored or
+// compared as plain text.
+const ACCOUNTS_STORAGE_KEY = "poolIQ.accounts";
+const SESSION_STORAGE_KEY = "poolIQ.session";
+
+function loadFromStorage(key, fallback) {
+  try {
+    const raw = window.localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+function saveToStorage(key, value) {
+  try {
+    window.localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // localStorage unavailable (private browsing, etc.) - fail silently, the
+    // app still works, it just won't remember anything across a reload.
+  }
+}
+function clearStorage(key) {
+  try {
+    window.localStorage.removeItem(key);
+  } catch {
+    // see saveToStorage
+  }
+}
+
 export default function PoolFieldLogApp() {
-  const [session, setSession] = useState(null);
+  const [session, setSession] = useState(() => loadFromStorage(SESSION_STORAGE_KEY, null));
+  const [accounts, setAccounts] = useState(() => loadFromStorage(ACCOUNTS_STORAGE_KEY, []));
+  const [showSignup, setShowSignup] = useState(false);
   const [allStops, setAllStops] = useState([]);
   const [managerRoute, setManagerRoute] = useState([]);
   const [dismissed, setDismissed] = useState([]);
@@ -3866,13 +5010,41 @@ export default function PoolFieldLogApp() {
     DEFAULT_CUSTOMERS.map((c, i) => ({ id: 1000 + i, technician: "*", customer: c.name, dueDate: todayStr() }))
   );
 
-  if (!session) return <LoginScreen onLogin={setSession} />;
+  useEffect(() => { saveToStorage(ACCOUNTS_STORAGE_KEY, accounts); }, [accounts]);
+
+  function handleLogin(newSession, rememberMe) {
+    setSession(newSession);
+    if (rememberMe) saveToStorage(SESSION_STORAGE_KEY, newSession);
+    else clearStorage(SESSION_STORAGE_KEY);
+  }
+  function handleLogout() {
+    setSession(null);
+    clearStorage(SESSION_STORAGE_KEY);
+  }
+  function setAccountPassword(id, password) {
+    setAccounts((cur) => cur.map((a) => (a.id === id ? { ...a, password } : a)));
+  }
+  function addAccounts(newAccounts) {
+    setAccounts((cur) => [...cur, ...newAccounts]);
+  }
+
+  if (showSignup) return <CompanySignup onBack={() => setShowSignup(false)} onComplete={addAccounts} />;
+  if (!session) {
+    return (
+      <LoginScreen
+        accounts={accounts}
+        onLogin={handleLogin}
+        onCreatePassword={setAccountPassword}
+        onSignupClick={() => setShowSignup(true)}
+      />
+    );
+  }
 
   if (session.role === "manager") {
     return (
       <ManagerView
         session={session}
-        onLogout={() => setSession(null)}
+        onLogout={handleLogout}
         allStops={allStops}
         setAllStops={setAllStops}
         managerRoute={managerRoute}
@@ -3892,7 +5064,7 @@ export default function PoolFieldLogApp() {
   return (
     <TechnicianView
       session={session}
-      onLogout={() => setSession(null)}
+      onLogout={handleLogout}
       allStops={allStops}
       setAllStops={setAllStops}
       customers={customers}
