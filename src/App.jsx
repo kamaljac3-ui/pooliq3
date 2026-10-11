@@ -1295,7 +1295,7 @@ function LoginScreen({ accounts, onLogin, onCreatePassword, onSignupClick }) {
           <path d="M0,55 C50,30 100,30 150,55 C200,80 250,80 300,55 C330,38 360,38 400,55 L400,90 L0,90 Z" fill="rgba(255,255,255,0.22)" />
         </svg>
         <div className="brand-hero-content">
-          <div className="brand-name">POOLIQ</div>
+          <div className="brand-name">POOL TRAJECTORY</div>
           <div className="brand-sub">FIELD LOG FOR POOL PROS</div>
           <div className="brand-tagline">Routes, water chemistry &amp; dosing in one place</div>
           <div className="brand-location">Prototype</div>
@@ -1679,7 +1679,7 @@ function CompanySignup({ onBack, onComplete }) {
             <label className="pfl-field-label">Payment method</label>
             <div className="follow-reason">
               {TRIAL_DAYS}-day free trial starting today - you won't be charged until it ends, and you can cancel
-              before then. We use Stripe to store your card; PoolIQ never sees or stores your card number directly.
+              before then. We use Stripe to store your card; Pool Trajectory never sees or stores your card number directly.
             </div>
             {cardOnFile ? (
               <div className="site-row" style={{ marginTop: "10px" }}>
@@ -3808,7 +3808,7 @@ function CustomerImportWizard({ customers, onImport, onClose }) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "poolIQ-customer-import-template.csv";
+    a.download = "pool-trajectory-customer-import-template.csv";
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -3840,7 +3840,7 @@ function CustomerImportWizard({ customers, onImport, onClose }) {
         <label className="pfl-field-label">Import customers from a spreadsheet</label>
         <div className="follow-reason">
           Upload a CSV export from whatever you're using now - QuickBooks, an old spreadsheet, another CRM. It doesn't
-          need to match PoolIQ's format; you'll map its columns on the next screen.
+          need to match Pool Trajectory's format; you'll map its columns on the next screen.
         </div>
         <label className="capture-btn" style={{ marginTop: "12px", height: "auto", padding: "18px" }}>
           <i className="capture-icon">+</i>
@@ -3863,7 +3863,7 @@ function CustomerImportWizard({ customers, onImport, onClose }) {
       <div className="pfl-card">
         <label className="pfl-field-label">Map your columns</label>
         <div className="follow-reason">
-          {fileName} - {rows.length} row{rows.length === 1 ? "" : "s"} found. Match each PoolIQ field to a column
+          {fileName} - {rows.length} row{rows.length === 1 ? "" : "s"} found. Match each Pool Trajectory field to a column
           from your file, or leave it unmapped to skip it.
         </div>
         <div style={{ marginTop: "12px" }}>
